@@ -1,4 +1,5 @@
 ﻿
+	using System;
 	using System.Threading;
 	using UnityEngine;
 
@@ -43,12 +44,26 @@
 					break;
 				}
 			}
-			if (moved) {
+			if (moved)
+			{
+				BitBuffer bb = new BitBuffer();
+				bb.PutBit(true);
+				bb.PutBit(true);
+				bb.PutBit(false);
+				bb.PutBit(false);
+				bb.PutBit(true);
+				bb.PutBit(false);
+				bb.PutBit(true);
+				bb.PutBit(false);
+				
+				Debug.Log("Data: "+Convert.ToString(bb.getData(),2));
+				Debug.Log("Count: "+bb.getCount());
+				Debug.Log("Buffer: "+bb.getPayload());
 				transform.Translate(deltaPosition);
 				Packet packet = new Packet.Builder(config.maxPacketSize)
 					.AddString("30 - Testing a fucking packet.")
 					.AddVector(deltaPosition)
-					//.AddBitBuffer(...)
+					.AddBitBuffer(bb)
 					//.AddInt(...)
 					//.WhatEverYouLike(...)
 					.Build();

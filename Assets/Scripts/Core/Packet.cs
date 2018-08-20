@@ -58,6 +58,21 @@
 			return data;
 		}
 
+		public BitBuffer GetBitBuffer()
+		{
+			long data = BitConverter.ToInt64(payload, position);
+			position += 8;
+			int count = BitConverter.ToInt32(payload, position);
+			position += 4;
+			byte length = GetByte();
+			byte[] buffer= new byte[length];
+			for (int i = 0; i < length; i++)
+			{
+				buffer[i] = GetByte();
+			}
+			return new BitBuffer(buffer,data,count);
+		}
+
 		public Packet Reset() {
 			position = 0;
 			return this;
@@ -105,6 +120,16 @@
 				AddFloat(vector.x);
 				AddFloat(vector.y);
 				AddFloat(vector.z);
+				return this;
+			}
+
+			public Builder AddBitBuffer(BitBuffer bb)
+			{
+				AddPayload(BitConverter.GetBytes(bb.getData()));
+				AddPayload(BitConverter.GetBytes(bb.getCount()));
+				byte[] payload = bb.getPayload();
+				AddByte((byte)payload.Length);
+				AddPayload(payload);
 				return this;
 			}
 

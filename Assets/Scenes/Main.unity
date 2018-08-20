@@ -300,7 +300,7 @@ MonoBehaviour:
   - {x: 3, y: 1, z: 2}
   peerIPs:
   - 0.0.0.0
-  - 10.17.68.92
+  - 127.0.0.1
   peerPorts: 1027000010270000
   maxPacketSize: 512
   maxPacketsInQueue: 100

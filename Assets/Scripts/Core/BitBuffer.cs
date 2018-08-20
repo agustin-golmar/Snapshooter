@@ -1,6 +1,7 @@
 ﻿
 	using System;
 	using System.IO;
+	using UnityEngine;
 	using UnityEngine.Assertions;
 
 /*
@@ -20,6 +21,16 @@
 			bits |= longValue << currentBitCount;
 			++currentBitCount;
 			WriteIfNecessary();
+		}
+
+		public long getData()
+		{
+			return bits;
+		}
+
+		public int getCount()
+		{
+			return currentBitCount;
 		}
 
 		public void PutBits(long value, int bitCount)
@@ -67,15 +78,42 @@
 			
 		}
 
+		public bool GetBit()
+		{
+			ReadIfNecessary();
+			long ret = bits & (1L<<currentBitCount);
+			currentBitCount--;
+			if (ret == 0)
+				return false;
+			return true;
+		}
 		public BitBuffer()
 		{
 			buffer = new MemoryStream();
+		}
+
+		public BitBuffer(byte[] payload, long bits, int currentBitCount)
+		{
+			buffer = new MemoryStream();
+			for (int i=0;i<payload.Length;i++)
+			{
+				buffer.WriteByte(payload[i]);
+			}
+
+			this.bits = bits;
+			this.currentBitCount = currentBitCount;
+		}
+
+		public byte[] getPayload()
+		{
+			return buffer.ToArray();
 		}
 
 		private void WriteIfNecessary()
 		{
 			if (32 <= currentBitCount)
 			{
+				Debug.Log("Writing");
 				if (4 + buffer.Position > buffer.Capacity)
 				{
 					throw new InvalidOperationException("Write buffer overflow");
@@ -91,6 +129,21 @@
 				buffer.WriteByte(a);
 				bits >>= 32;
 				currentBitCount -= 32;
+			}
+		}
+
+		private void ReadIfNecessary()
+		{
+			if (32 >= currentBitCount)
+			{
+				Debug.Log("Reading");
+				bits <<= 32;
+				int word = (byte)(buffer.ReadByte());
+				word |= (byte)(buffer.ReadByte() << 8);
+				word |= (byte)(buffer.ReadByte() << 16);
+				word |=(byte) (buffer.ReadByte() << 24);
+				bits |= word;
+				currentBitCount += 32;
 			}
 		}
 	}
