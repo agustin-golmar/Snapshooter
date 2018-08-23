@@ -11,61 +11,35 @@
 
 	public class BitBuffer {
 
-		protected long bits;
-		protected int currentBitCount;
-		protected MemoryStream buffer;
+		protected int bits = 0;
+		protected int currentBitCount = 0;
+		protected int length = 0;
+		protected int seek = 0;
+		protected byte [] buffer;
 
 		public void PutBit(bool value)
 		{
-			long longValue = value? 1L : 0L;
-			bits |= longValue << currentBitCount;
-			++currentBitCount;
-			WriteIfNecessary();
-		}
-
-		public long getData()
-		{
-			return bits;
-		}
-
-		public int getCount()
-		{
-			return currentBitCount;
+			int val = value ? 1 : 0;
+			bits |= val << currentBitCount;
+			currentBitCount++;
+			if (currentBitCount >= 8)
+			{
+				Debug.Log("Corta en: "+Convert.ToString(bits,2));
+				buffer[seek++] = (byte)bits;
+				length++;
+				currentBitCount = 0;
+				bits = 0;
+			}
 		}
 
 		public void PutBits(long value, int bitCount)
 		{
-			long mask = 0;
-			for (int i = 0; i < bitCount; i++)
-			{
-				mask <<= 1;
-				mask++;
-			}
-
-			long longValue = value & mask;
-			bits |= longValue << currentBitCount;
-			currentBitCount += bitCount;
-			WriteIfNecessary();
+		
 		}
 
 		public void PutInt(int value, int min, int max)
 		{
-			if (value < min || value > max)
-			{
-				throw new InvalidOperationException("Arguments error");
-			}
-			int bitCount = 0;
-			int counter = max - min;
-			while (counter > 0)
-			{
-				counter >>= 1;
-				bitCount++;
-			}
-
-			int writeVal = value - min;
-			bits |= writeVal << currentBitCount;
-			currentBitCount += bitCount;
-			WriteIfNecessary();
+			
 		}
 
 		public void PutFloat(float value, float min, float max, float step)
@@ -73,77 +47,58 @@
 			
 		}
 
-		public void Flush()
+		private void Flush()
 		{
-			
+			length = 0;
+			seek = 0;
+			bits = 0;
+			currentBitCount = 0;
+
 		}
 
 		public bool GetBit()
 		{
-			ReadIfNecessary();
-			long ret = bits & (1L<<currentBitCount);
+			if (currentBitCount == 0)
+			{
+				bits = buffer[seek];
+				Debug.Log("Buffer is: "+Convert.ToString(buffer[seek],2));
+				seek++;
+				currentBitCount = 8;
+			}
+
+			int mask = 1 << (8-currentBitCount);
+			bool ret = ((bits & mask) != 0);
 			currentBitCount--;
-			if (ret == 0)
-				return false;
-			return true;
+			return ret;
+
 		}
 		public BitBuffer()
 		{
-			buffer = new MemoryStream();
+			buffer = new byte[512];
 		}
 
-		public BitBuffer(byte[] payload, long bits, int currentBitCount)
+		public BitBuffer(byte[] payload)
 		{
-			buffer = new MemoryStream();
+			buffer = new byte[512];
 			for (int i=0;i<payload.Length;i++)
 			{
-				buffer.WriteByte(payload[i]);
+				buffer[i] = payload[i];
+				length++;
 			}
-
-			this.bits = bits;
-			this.currentBitCount = currentBitCount;
 		}
 
 		public byte[] getPayload()
 		{
-			return buffer.ToArray();
-		}
-
-		private void WriteIfNecessary()
-		{
-			if (32 <= currentBitCount)
+			byte[] ret = new byte[length+1];
+			for (int i = 0; i < length; i++)
 			{
-				Debug.Log("Writing");
-				if (4 + buffer.Position > buffer.Capacity)
-				{
-					throw new InvalidOperationException("Write buffer overflow");
-				}
-				int word = (int) bits;
-				byte a = (byte) (word);
-				byte b = (byte) (word >> 8);
-				byte c = (byte) (word >> 16);
-				byte d = (byte) (word >> 24);
-				buffer.WriteByte(d);
-				buffer.WriteByte(c);
-				buffer.WriteByte(b);
-				buffer.WriteByte(a);
-				bits >>= 32;
-				currentBitCount -= 32;
+				
+				ret[i] = buffer[i];
 			}
-		}
-
-		private void ReadIfNecessary()
-		{
-			if (32 >= currentBitCount)
-			{
-				Debug.Log("Reading");
-				bits <<= 32;
-				int word = (byte)(buffer.ReadByte());
-				word |= (byte)(buffer.ReadByte() << 8);
-				word |= (byte)(buffer.ReadByte() << 16);
-				word |=(byte) (buffer.ReadByte() << 24);
-				bits |= word;
-				currentBitCount += 32;
-			}
+			
+			ret[length] = (byte)bits;
+			Debug.Log("Bits: "+Convert.ToString(bits,2));
+			Flush();
+			return ret;
 		}
 	}

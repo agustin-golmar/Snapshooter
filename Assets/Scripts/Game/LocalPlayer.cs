@@ -55,10 +55,11 @@
 				bb.PutBit(false);
 				bb.PutBit(true);
 				bb.PutBit(false);
+				bb.PutBit(true);
+				bb.PutBit(false);
+				bb.PutBit(false);
+				bb.PutBit(true);
 				
-				Debug.Log("Data: "+Convert.ToString(bb.getData(),2));
-				Debug.Log("Count: "+bb.getCount());
-				Debug.Log("Buffer: "+bb.getPayload());
 				transform.Translate(deltaPosition);
 				Packet packet = new Packet.Builder(config.maxPacketSize)
 					.AddString("30 - Testing a fucking packet.")
@@ -67,6 +68,8 @@
 					//.AddInt(...)
 					//.WhatEverYouLike(...)
 					.Build();
+				
+				//Debug.Log("Buffer len: "+bb.getBuffer().Length);
 				stream.Write(packet);
 				Debug.Log("El jugador local se movió.");
 			}
