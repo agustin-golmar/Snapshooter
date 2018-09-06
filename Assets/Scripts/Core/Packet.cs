@@ -128,7 +128,7 @@
 			{
 				//AddPayload(BitConverter.GetBytes(bb.getData()));
 				//AddPayload(BitConverter.GetBytes(bb.getCount()));
-				byte[] payload = bb.getPayload();
+				byte[] payload = bb.GetPayload();
 				foreach (byte b in payload)
 				{
 					Debug.Log("Manda: "+Convert.ToString(b,2));

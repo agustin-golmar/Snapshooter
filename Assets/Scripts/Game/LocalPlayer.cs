@@ -47,18 +47,8 @@
 			if (moved)
 			{
 				BitBuffer bb = new BitBuffer();
-				bb.PutBit(true);
-				bb.PutBit(true);
-				bb.PutBit(false);
-				bb.PutBit(false);
-				bb.PutBit(true);
-				bb.PutBit(false);
-				bb.PutBit(true);
-				bb.PutBit(false);
-				bb.PutBit(true);
-				bb.PutBit(false);
-				bb.PutBit(false);
-				bb.PutBit(true);
+				bb.PutBits(0x12345,20);
+				bb.PutBits(0x03,3);
 				
 				transform.Translate(deltaPosition);
 				Packet packet = new Packet.Builder(config.maxPacketSize)

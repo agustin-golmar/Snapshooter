@@ -22,22 +22,11 @@
 				//Debug.Log("Data2: "+Convert.ToString(bb.getData(),2));
 				//Debug.Log("Count2: "+bb.getCount());
 				//Debug.Log("Buffer2 len: "+bb.getBuffer().Length);
-				Debug.Log("V1: "+bb.GetBit());
-				Debug.Log("V2: "+bb.GetBit());
-				Debug.Log("V3: "+bb.GetBit());
-				Debug.Log("V4: "+bb.GetBit());
-				Debug.Log("V5: "+bb.GetBit());
-				Debug.Log("V6: "+bb.GetBit());
-				Debug.Log("V7: "+bb.GetBit());
-				Debug.Log("V8: "+bb.GetBit());
-				Debug.Log("V9: "+bb.GetBit());
-				Debug.Log("V10: "+bb.GetBit());
-				Debug.Log("V11: "+bb.GetBit());
-				Debug.Log("V12: "+bb.GetBit());
-				
+				Debug.Log("Valor1: "+Convert.ToString(bb.GetBits(20),16));
+				Debug.Log("Valor2: "+Convert.ToString(bb.GetBits(3),16));
 				//Debug.Log("Data2': "+Convert.ToString(bb.getData(),2));
 				//Debug.Log("Count2': "+bb.getCount());
-				
+
 			}
 		}
 

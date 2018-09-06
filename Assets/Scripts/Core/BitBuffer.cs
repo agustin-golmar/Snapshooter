@@ -10,31 +10,44 @@
 		*/
 
 	public class BitBuffer {
-
-		protected int bits = 0;
-		protected int currentBitCount = 0;
-		protected int length = 0;
-		protected int seek = 0;
-		protected byte [] buffer;
+		private long _bits = 0;
+		private int _currentBitCount = 0;
+		private int _length = 0;
+		private int _seek = 0;
+		private readonly byte [] _buffer;
 
 		public void PutBit(bool value)
 		{
-			int val = value ? 1 : 0;
-			bits |= val << currentBitCount;
-			currentBitCount++;
-			if (currentBitCount >= 8)
+			PutBits(value ? 1 : 0, 1);
+		}
+
+		private void AddByte()
+		{
+			while (_currentBitCount >= 8)
 			{
-				Debug.Log("Corta en: "+Convert.ToString(bits,2));
-				buffer[seek++] = (byte)bits;
-				length++;
-				currentBitCount = 0;
-				bits = 0;
+				Debug.Log("Corta en: " + Convert.ToString(_bits, 2));
+				_buffer[_seek++] = (byte) _bits;
+				_length++;
+				_currentBitCount -= 8;
+				_bits >>= 8;
 			}
 		}
 
 		public void PutBits(long value, int bitCount)
 		{
-		
+			long mask = 0;
+			for(int i=0; i<bitCount;i++)
+			{
+				mask <<= 1;
+				mask++;
+			}
+
+			long val = value & mask;
+			_bits |= (val << _currentBitCount);
+			_currentBitCount += bitCount;
+			AddByte();
+
+
 		}
 
 		public void PutInt(int value, int min, int max)
@@ -49,55 +62,77 @@
 
 		private void Flush()
 		{
-			length = 0;
-			seek = 0;
-			bits = 0;
-			currentBitCount = 0;
+			_length = 0;
+			_seek = 0;
+			_bits = 0;
+			_currentBitCount = 0;
 
 		}
 
 		public bool GetBit()
 		{
-			if (currentBitCount == 0)
-			{
-				bits = buffer[seek];
-				Debug.Log("Buffer is: "+Convert.ToString(buffer[seek],2));
-				seek++;
-				currentBitCount = 8;
-			}
+			return GetBits(1) == 1;
 
-			int mask = 1 << (8-currentBitCount);
-			bool ret = ((bits & mask) != 0);
-			currentBitCount--;
+		}
+
+		public long GetBits(int bitcount)
+		{
+			long mask = 0;
+			for (int i = 0; i < bitcount; i++)
+			{
+				mask <<= 1;
+				mask++;
+			}
+			Debug.Log("Mask: "+ Convert.ToString(mask,2));
+			GetByte(bitcount);
+			long ret = _bits & mask;
+			_currentBitCount -= bitcount;
+			_bits >>= bitcount;
 			return ret;
+
+		}
+
+		private void GetByte(int bitcount)
+		{
+			while (_currentBitCount < bitcount)
+			{
+				//_bits <<= 8;
+				_bits |= _buffer[_seek]<< _currentBitCount;
+				
+				Debug.Log("Temp bits: " + Convert.ToString(_bits, 2));
+				Debug.Log("Buffer is: " + Convert.ToString(_buffer[_seek], 2));
+				_seek++;
+				_currentBitCount += 8;
+			}
+			Debug.Log("Bits is: " + Convert.ToString(_bits, 2));
 
 		}
 		public BitBuffer()
 		{
-			buffer = new byte[512];
+			_buffer = new byte[512];
 		}
 
 		public BitBuffer(byte[] payload)
 		{
-			buffer = new byte[512];
+			_buffer = new byte[512];
 			for (int i=0;i<payload.Length;i++)
 			{
-				buffer[i] = payload[i];
-				length++;
+				_buffer[i] = payload[i];
+				_length++;
 			}
 		}
 
-		public byte[] getPayload()
+		public byte[] GetPayload()
 		{
-			byte[] ret = new byte[length+1];
-			for (int i = 0; i < length; i++)
+			byte[] ret = new byte[_length+1];
+			for (int i = 0; i < _length; i++)
 			{
 				
-				ret[i] = buffer[i];
+				ret[i] = _buffer[i];
 			}
 			
-			ret[length] = (byte)bits;
-			Debug.Log("Bits: "+Convert.ToString(bits,2));
+			ret[_length] = (byte)_bits;
+			Debug.Log("Bits: "+Convert.ToString(_bits,2));
 			Flush();
 			return ret;
 		}
