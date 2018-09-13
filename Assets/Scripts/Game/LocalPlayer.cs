@@ -49,6 +49,8 @@
 				BitBuffer bb = new BitBuffer();
 				bb.PutBits(0x12345,20);
 				bb.PutBits(0x03,3);
+				bb.PutInt(5,0,10);
+				bb.PutInt(12,6,15);
 				
 				transform.Translate(deltaPosition);
 				Packet packet = new Packet.Builder(config.maxPacketSize)

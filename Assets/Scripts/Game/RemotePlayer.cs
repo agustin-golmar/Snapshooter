@@ -24,6 +24,8 @@
 				//Debug.Log("Buffer2 len: "+bb.getBuffer().Length);
 				Debug.Log("Valor1: "+Convert.ToString(bb.GetBits(20),16));
 				Debug.Log("Valor2: "+Convert.ToString(bb.GetBits(3),16));
+				Debug.Log("Valor3: "+Convert.ToString(bb.GetInt(0,10)));
+				Debug.Log("Valor4: "+Convert.ToString(bb.GetInt(6,15)));
 				//Debug.Log("Data2': "+Convert.ToString(bb.getData(),2));
 				//Debug.Log("Count2': "+bb.getCount());
 

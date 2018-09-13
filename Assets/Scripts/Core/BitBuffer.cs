@@ -52,7 +52,15 @@
 
 		public void PutInt(int value, int min, int max)
 		{
-			
+			int range = max - min;
+			PutBits(value-min,(int)Math.Log(range,2)+1);
+
+		}
+
+		public int GetInt(int min, int max)
+		{
+			int range = max - min;
+			return (int) GetBits((int) Math.Log(range, 2) + 1) + min;
 		}
 
 		public void PutFloat(float value, float min, float max, float step)
