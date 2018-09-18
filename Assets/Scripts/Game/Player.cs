@@ -10,19 +10,33 @@
 		: MonoBehaviour, IBindable, IIdentifiable, IReplicable {
 
 		protected Configuration config;
-		protected Transport link;
-		protected Stream stream;
+		protected Link link;
+		protected Stream input;
+		protected Stream output;
 		protected int id;
+		protected float lastSnapshot;
+		protected float deltaSnapshot;
 
-		void Awake() {
+		protected void Awake() {
 			config = GameObject
 				.Find("Configuration")
 				.GetComponent<Configuration>();
 		}
 
-		void Start() {
+		protected void Start() {
 			link = config.GetLink(id);
-			stream = new Stream(config.maxPacketsInQueue);
+			input = new Stream(config.maxPacketsInQueue);
+			output = new Stream(config.maxPacketsInQueue);
+			lastSnapshot = Time.fixedUnscaledTime;
+			deltaSnapshot = 1.0f/10.0f;
+		}
+
+		public Stream GetInputStream() {
+			return input;
+		}
+
+		public Stream GetOutputStream() {
+			return output;
 		}
 
 		public int GetID() {

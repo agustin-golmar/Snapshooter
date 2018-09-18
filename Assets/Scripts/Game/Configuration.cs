@@ -21,8 +21,8 @@
 
 		// Servicios globales:
 		protected Threading threading;
-		protected Transport [] links;
 		protected Player [] players;
+		protected Link [] links;
 
 		// Estado global:
 		protected bool onEscape;
@@ -43,7 +43,7 @@
 		void Start() {
 			Debug.Log("Starting scene...");
 			threading = new Threading(peerIPs.Length);
-			links = new Transport [peerIPs.Length];
+			links = new Link [peerIPs.Length];
 			players = new Player [peerIPs.Length];
 			onEscape = false;
 			onStart = false;
@@ -62,12 +62,16 @@
 			}
 		}
 
-		public Transport GetLink(int index) {
+		public Link GetLink(int index) {
 			return links[index];
 		}
 
-		public Transport [] GetLinks() {
+		public Link [] GetLinks() {
 			return links;
+		}
+
+		public Player GetPlayer(int index) {
+			return players[index];
 		}
 
 		public bool OnEscape() {
@@ -95,7 +99,7 @@
 			for (int i = 0; i < players.Length; ++i) {
 				Player player = players[i];
 				player.SetID(i);
-				links[i] = new Transport.Builder()
+				links[i] = new Link.Builder()
 					.IP(peerIPs[i])
 					.Port(peerPorts[i])
 					.Bind(player.ShouldBind())

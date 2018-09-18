@@ -20,6 +20,7 @@
 
 		public Packet(byte [] payload) {
 			this.payload = payload;
+			position = 0;
 		}
 
 		protected Packet(Builder builder) {
@@ -47,6 +48,20 @@
 			return data;
 		}
 
+		public int GetInteger() {
+			int data = BitConverter.ToInt32(payload, position);
+			position += 4;
+			return data;
+		}
+
+		public PacketType GetPacketType() {
+			return (PacketType) GetByte();
+		}
+
+		public Quaternion GetQuaternion() {
+			return new Quaternion(GetFloat(), GetFloat(), GetFloat(), GetFloat());
+		}
+
 		public Vector3 GetVector() {
 			return new Vector3(GetFloat(), GetFloat(), GetFloat());
 		}
@@ -58,9 +73,13 @@
 			return data;
 		}
 
-		public Packet Reset() {
-			position = 0;
+		public Packet Reset(int position) {
+			this.position = position;
 			return this;
+		}
+
+		public Packet Reset() {
+			return Reset(0);
 		}
 
 		public class Builder {
@@ -79,13 +98,19 @@
 			}
 
 			public Builder AddFloat(float data) {
-				AddPayload(BitConverter.GetBytes(data));
-				return this;
+				return AddPayload(BitConverter.GetBytes(data));
+			}
+
+			public Builder AddInteger(int data) {
+				return AddPayload(BitConverter.GetBytes(data));
+			}
+
+			public Builder AddPacketType(PacketType type) {
+				return AddByte((byte) type);
 			}
 
 			public Builder AddPayload(byte [] data) {
-				AddPayload(data, 0, data.Length);
-				return this;
+				return AddPayload(data, 0, data.Length);
 			}
 
 			public Builder AddPayload(byte [] data, int index, int size) {
@@ -94,18 +119,28 @@
 				return this;
 			}
 
+			public Builder AddQuaternion(Quaternion quaternion) {
+				// Se puede optimizar?
+				// w = 1 siempre?
+				// ||(x, y, z)|| = 1 siempre?
+				// En este caso, solo se transmite (x, y)
+				// y luego w = 1, y z = sqrt(1 - x^2 + y^2)
+				AddFloat(quaternion.x);
+				AddFloat(quaternion.y);
+				AddFloat(quaternion.z);
+				return AddFloat(quaternion.w);
+			}
+
 			public Builder AddString(string data) {
 				byte [] stringPayload = Encoding.UTF8.GetBytes(data);
 				AddByte((byte) stringPayload.Length);
-				AddPayload(stringPayload);
-				return this;
+				return AddPayload(stringPayload);
 			}
 
 			public Builder AddVector(Vector3 vector) {
 				AddFloat(vector.x);
 				AddFloat(vector.y);
-				AddFloat(vector.z);
-				return this;
+				return AddFloat(vector.z);
 			}
 
 			public Packet Build() {

@@ -14,47 +14,48 @@
 		private const string KEY_S = "s";
 		private const string KEY_D = "d";
 
+		// N° de secuencia local:
+		protected int sequence;
+
 		// Velocidad, en [m/s]:
 		public float speed;
 
-		void Update() {
-			bool moved = true;
+		protected new void Start() {
+			base.Start();
+			sequence = 0;
+		}
+
+		protected void Update() {
 			float delta = speed * Time.deltaTime;
-			Vector3 deltaPosition = Vector3.zero;
-			switch (Input.inputString) {
-				case KEY_W : {
-					deltaPosition = new Vector3(0, 0, delta);
-					break;
-				}
-				case KEY_A : {
-					deltaPosition = new Vector3(-delta, 0, 0);
-					break;
-				}
-				case KEY_S : {
-					deltaPosition = new Vector3(0, 0, -delta);
-					break;
-				}
-				case KEY_D : {
-					deltaPosition = new Vector3(delta, 0, 0);
-					break;
-				}
-				default : {
-					moved = false;
-					break;
-				}
+			if (Input.GetKey(KEY_W)) {
+				transform.Translate(0, 0, delta);
 			}
-			if (moved) {
-				transform.Translate(deltaPosition);
+			if (Input.GetKey(KEY_A)) {
+				transform.Rotate(Vector3.down, 30.0f * delta);
+			}
+			if (Input.GetKey(KEY_S)) {
+				transform.Translate(0, 0, -delta);
+			}
+			if (Input.GetKey(KEY_D)) {
+				transform.Rotate(Vector3.up, 30.0f * delta);
+			}
+			float currentTime = Time.fixedUnscaledTime;
+			if (deltaSnapshot < currentTime - lastSnapshot) {
+				lastSnapshot = currentTime;
+				Debug.Log("Frame " + Time.frameCount + " -> " + Time.fixedUnscaledTime + " sec.");
 				Packet packet = new Packet.Builder(config.maxPacketSize)
-					.AddString("30 - Testing a fucking packet.")
-					.AddVector(deltaPosition)
-					//.AddBitBuffer(...)
-					//.AddInt(...)
-					//.WhatEverYouLike(...)
+					.AddPacketType(PacketType.SNAPSHOT)
+					.AddInteger(sequence++)
+					.AddVector(transform.position)
+					.AddQuaternion(transform.rotation)
 					.Build();
-				stream.Write(packet);
-				Debug.Log("El jugador local se movió.");
+				output.Write(packet);
 			}
+			Debug.Log("El jugador local se movió.");
+		}
+
+		protected void LateUpdate() {
+			Camera.main.transform.LookAt(transform);
 		}
 
 		public override bool ShouldBind() {
@@ -67,7 +68,9 @@
 				Thread.Sleep(100);
 			}
 			while (!config.OnEscape()) {
-				link.Multicast(config.GetLinks(), 1, stream);
+				// Enviar también ACKs hacia los demás links.
+				// Para esto se utilizan los output buffers de los RemotePlayer's.
+				link.Multicast(config.GetLinks(), 1, output);
 				Thread.Sleep(config.replicationLag);
 			}
 		}

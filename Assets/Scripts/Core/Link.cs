@@ -10,7 +10,7 @@
 		* @see https://msdn.microsoft.com/en-us/library/system.net.sockets.udpclient(v=vs.110).aspx
 		*/
 
-	public class Transport {
+	public class Link {
 
 		protected readonly object receiveLock = new object();
 		protected readonly object sendLock = new object();
@@ -18,7 +18,7 @@
 		protected UdpClient receiveSocket;
 		protected UdpClient sendSocket;
 
-		public Transport(Builder builder) {
+		public Link(Builder builder) {
 			endpoint = new IPEndPoint(IPAddress.Parse(builder.ip), builder.port);
 			if (builder.bind) {
 				receiveSocket = ConcurrentSocket(endpoint);
@@ -50,7 +50,7 @@
 			}
 		}
 
-		public Transport Multicast(Transport [] remotes, int baseIndex, Stream stream) {
+		public Link Multicast(Link [] remotes, int baseIndex, Stream stream) {
 			Packet packet = stream.Read();
 			if (packet != null) {
 				for (int i = baseIndex; i < remotes.Length; ++i) {
@@ -60,7 +60,7 @@
 			return this;
 		}
 
-		public byte [] Receive(Transport remote) {
+		public byte [] Receive(Link remote) {
 			lock (receiveLock) {
 				try {
 					byte [] payload = receiveSocket.Receive(ref remote.endpoint);
@@ -72,7 +72,7 @@
 			}
 		}
 
-		public int Send(Transport remote, Packet packet) {
+		public int Send(Link remote, Packet packet) {
 			if (packet != null) {
 				byte [] payload = packet.GetPayload();
 				lock (sendLock) {
@@ -85,7 +85,7 @@
 			return 0;
 		}
 
-		public int Send(Transport remote, Stream stream) {
+		public int Send(Link remote, Stream stream) {
 			return Send(remote, stream.Read());
 		}
 
@@ -130,8 +130,8 @@
 				return this;
 			}
 
-			public Transport Build() {
-				return new Transport(this);
+			public Link Build() {
+				return new Link(this);
 			}
 		}
 	}
