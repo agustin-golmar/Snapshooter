@@ -15,6 +15,11 @@
 			interpolator = new SnapshotInterpolator(2, 10);
 		}
 
+		protected new void Start() {
+			base.Start();
+			interpolator.SetBaseTime(Time.fixedUnscaledTime);
+		}
+
 		protected void Update() {
 			Packet packet = input.SoftRead();
 			if (packet != null) {
