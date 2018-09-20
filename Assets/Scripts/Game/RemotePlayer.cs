@@ -26,7 +26,7 @@
 				Debug.Log("Valor2: "+Convert.ToString(bb.GetBits(3),16));
 				Debug.Log("Valor3: "+Convert.ToString(bb.GetInt(0,10)));
 				Debug.Log("Valor4: "+Convert.ToString(bb.GetInt(6,15)));
-				//Debug.Log("Data2': "+Convert.ToString(bb.getData(),2));
+				Debug.Log("Float: "+Convert.ToString(bb.GetFloat(1.0f,3.0f,0.1f)));
 				//Debug.Log("Count2': "+bb.getCount());
 
 			}

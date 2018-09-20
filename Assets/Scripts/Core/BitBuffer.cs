@@ -65,7 +65,16 @@
 
 		public void PutFloat(float value, float min, float max, float step)
 		{
-			
+			int val = (int) ((value - min) / step);
+			int maxi = (int) ((max - min) / step);
+			PutInt(val,0,maxi);
+		}
+
+		public float GetFloat(float min, float max, float step)
+		{
+			int maxi = (int) ((max - min) / step);
+			int val = GetInt(0, maxi);
+			return val * step + min;
 		}
 
 		private void Flush()

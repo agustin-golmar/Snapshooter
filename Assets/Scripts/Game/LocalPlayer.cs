@@ -51,6 +51,7 @@
 				bb.PutBits(0x03,3);
 				bb.PutInt(5,0,10);
 				bb.PutInt(12,6,15);
+				bb.PutFloat(2.2f,1.0f,3.0f,0.1f);
 				
 				transform.Translate(deltaPosition);
 				Packet packet = new Packet.Builder(config.maxPacketSize)
