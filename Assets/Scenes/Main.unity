@@ -303,9 +303,9 @@ MonoBehaviour:
   - 127.0.0.1
   peerPorts: 1027000010270000
   maxPacketSize: 512
-  maxPacketsInQueue: 100
-  receiveTimeout: 1000
-  sendTimeout: 5000
+  maxPacketsInQueue: 10
+  receiveTimeout: 50
+  sendTimeout: 50
   replicationLag: 20
 --- !u!4 &684639884
 Transform:

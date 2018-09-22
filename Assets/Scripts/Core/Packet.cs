@@ -15,7 +15,7 @@
 
 	public class Packet {
 
-		protected byte [] payload;
+		protected readonly byte [] payload;
 		protected int position;
 
 		public Packet(byte [] payload) {
@@ -84,7 +84,7 @@
 
 		public class Builder {
 
-			public byte [] payload;
+			public readonly byte [] payload;
 			public int position;
 
 			public Builder(int maxPacketSize) {
@@ -121,10 +121,9 @@
 
 			public Builder AddQuaternion(Quaternion quaternion) {
 				// Se puede optimizar?
-				// w = 1 siempre?
-				// ||(x, y, z)|| = 1 siempre?
-				// En este caso, solo se transmite (x, y)
-				// y luego w = 1, y z = sqrt(1 - x^2 + y^2)
+				// ||(x, y, z, w)|| = 1 siempre?
+				// En este caso, solo se transmite (x, y, z)
+				// y luego w = sqrt(1 - x^2 + y^2 + z^2)
 				AddFloat(quaternion.x);
 				AddFloat(quaternion.y);
 				AddFloat(quaternion.z);

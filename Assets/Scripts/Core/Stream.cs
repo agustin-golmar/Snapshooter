@@ -12,8 +12,8 @@
 	public class Stream {
 
 		protected readonly object streamLock = new object();
-		protected Queue<Packet> packets;
-		protected int maxPacketsInQueue;
+		protected readonly Queue<Packet> packets;
+		protected readonly int maxPacketsInQueue;
 
 		public Stream(int maxPacketsInQueue) {
 			this.maxPacketsInQueue = maxPacketsInQueue;

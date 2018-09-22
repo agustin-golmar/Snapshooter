@@ -35,7 +35,7 @@
 		void OnApplicationQuit() {
 			Debug.Log("Exiting...");
 			onEscape = true;
-			Thread.Sleep(5000);
+			Thread.Sleep(250);
 			threading.Shutdown();
 			Debug.Log("Finish.");
 		}

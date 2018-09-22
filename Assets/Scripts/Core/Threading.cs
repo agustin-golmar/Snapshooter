@@ -9,7 +9,7 @@
 
 	public class Threading {
 
-		protected Thread [] threads;
+		protected readonly Thread [] threads;
 
 		public Threading(int poolSize) {
 			threads = new Thread [poolSize];

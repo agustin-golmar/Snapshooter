@@ -26,6 +26,27 @@
 		}
 
 		protected void Update() {
+			Move();
+			float currentTime = Time.fixedUnscaledTime;
+			if (deltaSnapshot < currentTime - lastSnapshot) {
+				lastSnapshot = currentTime;
+				Debug.Log("Frame " + Time.frameCount + " -> " + currentTime + " sec.");
+				Packet packet = new Packet.Builder(config.maxPacketSize)
+					.AddPacketType(PacketType.SNAPSHOT)
+					.AddInteger(sequence++)
+					.AddFloat(currentTime)
+					.AddVector(transform.position)
+					.AddQuaternion(transform.rotation)
+					.Build();
+				output.Write(packet);
+			}
+		}
+
+		protected void LateUpdate() {
+			Camera.main.transform.LookAt(transform);
+		}
+
+		public void Move() {
 			float delta = speed * Time.deltaTime;
 			if (Input.GetKey(KEY_W)) {
 				transform.Translate(0, 0, delta);
@@ -39,23 +60,6 @@
 			if (Input.GetKey(KEY_D)) {
 				transform.Rotate(Vector3.up, 30.0f * delta);
 			}
-			float currentTime = Time.fixedUnscaledTime;
-			if (deltaSnapshot < currentTime - lastSnapshot) {
-				lastSnapshot = currentTime;
-				Debug.Log("Frame " + Time.frameCount + " -> " + Time.fixedUnscaledTime + " sec.");
-				Packet packet = new Packet.Builder(config.maxPacketSize)
-					.AddPacketType(PacketType.SNAPSHOT)
-					.AddInteger(sequence++)
-					.AddVector(transform.position)
-					.AddQuaternion(transform.rotation)
-					.Build();
-				output.Write(packet);
-			}
-			Debug.Log("El jugador local se movió.");
-		}
-
-		protected void LateUpdate() {
-			Camera.main.transform.LookAt(transform);
 		}
 
 		public override bool ShouldBind() {
@@ -70,6 +74,7 @@
 			while (!config.OnEscape()) {
 				// Enviar también ACKs hacia los demás links.
 				// Para esto se utilizan los output buffers de los RemotePlayer's.
+				// Deberia utilizarse otro thread con round-robin.
 				link.Multicast(config.GetLinks(), 1, output);
 				Thread.Sleep(config.replicationLag);
 			}

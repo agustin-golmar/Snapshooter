@@ -10,10 +10,16 @@
 		: MonoBehaviour, IBindable, IIdentifiable, IReplicable {
 
 		protected Configuration config;
+
+		// Estos 3 no se pueden contener en un único objeto?
 		protected Link link;
-		protected Stream input;
+		protected Demultiplexer input;
 		protected Stream output;
+
+		// Es necesario? Se puede evitar?
 		protected int id;
+
+		// Debería estar en otro lado...
 		protected float lastSnapshot;
 		protected float deltaSnapshot;
 
@@ -25,13 +31,13 @@
 
 		protected void Start() {
 			link = config.GetLink(id);
-			input = new Stream(config.maxPacketsInQueue);
+			input = new Demultiplexer(config.maxPacketsInQueue);
 			output = new Stream(config.maxPacketsInQueue);
 			lastSnapshot = Time.fixedUnscaledTime;
 			deltaSnapshot = 1.0f/10.0f;
 		}
 
-		public Stream GetInputStream() {
+		public Demultiplexer GetInputDemultiplexer() {
 			return input;
 		}
 

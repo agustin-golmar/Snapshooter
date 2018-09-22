@@ -11,43 +11,28 @@
 		protected SnapshotInterpolator interpolator;
 
 		public RemotePlayer() {
-			// Interpolar de a 2 snapshots a 10 SPS:
+			// Interpolar de a 2 snapshots (no puede ser menos de 2), a 10 SPS:
 			interpolator = new SnapshotInterpolator(2, 10);
 		}
 
-		protected new void Start() {
-			base.Start();
-			interpolator.SetBaseTime(Time.fixedUnscaledTime);
-		}
-
 		protected void Update() {
-			Packet packet = input.SoftRead();
-			if (packet != null) {
-				Debug.Log("Packet size: " + packet.GetPayload().Length);
-				PacketType type = packet.GetPacketType();
-				packet.Reset();
-				switch (type) {
-					case PacketType.SNAPSHOT : {
-						interpolator.AddPacket(packet);
-						input.Pop();
-						break;
-					}
-					case PacketType.EVENT : {
-						// Manejar evento...
-						break;
-					}
-					case PacketType.FLOODING : {
-						// Manejar flood...
-						break;
-					}
+			// Obtener todas las snapshots disponibles:
+			while (true) {
+				Packet packet = input.Read(PacketType.SNAPSHOT);
+				if (packet != null) {
+					interpolator.AddPacket(packet);
+					Debug.Log("Nuevo paquete de snapshot agregado.");
 				}
-				Debug.Log("PacketType: " + packet.GetPacketType());
+				else break;
 			}
-			// La 1er snapshot puede ser null, porque no existe...
+			// Se puede interpolar, sólo si hay snapshots:
 			Snapshot snapshot = interpolator.GetSnapshot();
 			if (snapshot != null) {
 				transform.SetPositionAndRotation(snapshot.GetPosition(), snapshot.GetRotation());
-				/* hack */transform.Translate(0, 1, 0);
+				/* hack */transform.Translate(0.0f, 1.0f, 0.0f);
+			}
+			else {
+				Debug.Log("\tNo se puede interpolar, la snapshot es nula.");
 			}
 		}
 
@@ -60,7 +45,7 @@
 			while (!config.OnStart()) {
 				Thread.Sleep(100);
 			}
-			Stream localInput = config.GetPlayer(0).GetInputStream();
+			Demultiplexer localInput = config.GetPlayer(0).GetInputDemultiplexer();
 			Link localLink = config.GetLink(0);
 			while (!config.OnEscape()) {
 				byte [] payload = localLink.Receive(link);
@@ -70,7 +55,7 @@
 					packet.Reset();
 					switch (type) {
 						case PacketType.ACK : {
-							localInput.Write(packet);
+							localInput.Write(type, packet);
 							break;
 						}
 						default : {

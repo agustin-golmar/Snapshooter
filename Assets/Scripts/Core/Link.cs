@@ -14,9 +14,9 @@
 
 		protected readonly object receiveLock = new object();
 		protected readonly object sendLock = new object();
+		protected readonly UdpClient receiveSocket;
+		protected readonly UdpClient sendSocket;
 		protected IPEndPoint endpoint;
-		protected UdpClient receiveSocket;
-		protected UdpClient sendSocket;
 
 		public Link(Builder builder) {
 			endpoint = new IPEndPoint(IPAddress.Parse(builder.ip), builder.port);
