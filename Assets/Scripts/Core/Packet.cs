@@ -73,6 +73,20 @@
 			return data;
 		}
 
+		public BitBuffer GetBitBuffer() {
+			//long data = BitConverter.ToInt64(payload, position);
+			//position += 8;
+			//int count = BitConverter.ToInt32(payload, position);
+			//position += 4;
+			byte length = GetByte();
+			byte[] buffer = new byte[length];
+			Debug.Log("BUFLEN: " + length);
+			for (int i = 0; i < length; ++i) {
+				buffer[i] = GetByte();
+			}
+			return new BitBuffer(buffer);
+		}
+
 		public Packet Reset(int position) {
 			this.position = position;
 			return this;
@@ -140,6 +154,18 @@
 				AddFloat(vector.x);
 				AddFloat(vector.y);
 				return AddFloat(vector.z);
+			}
+
+			public Builder AddBitBuffer(BitBuffer bb) {
+				//AddPayload(BitConverter.GetBytes(bb.getData()));
+				//AddPayload(BitConverter.GetBytes(bb.getCount()));
+				byte[] payload = bb.GetPayload();
+				foreach (byte b in payload) {
+					Debug.Log("Manda: " + Convert.ToString(b,2));
+				}
+				AddByte((byte)payload.Length);
+				AddPayload(payload);
+				return this;
 			}
 
 			public Packet Build() {

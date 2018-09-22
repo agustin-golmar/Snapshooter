@@ -1,96 +1,154 @@
 ﻿
 	using System;
-	using System.IO;
-	using UnityEngine.Assertions;
+	using UnityEngine;
 
-/*
+		/*
 		* Permite almacenar un flujo de bits dentro de un flujo de bytes,
 		* aprovechando el espacio disponible en el último.
 		*/
 
 	public class BitBuffer {
-
-		protected long bits;
-		protected int currentBitCount;
-		protected MemoryStream buffer;
+		private long _bits = 0;
+		private int _currentBitCount = 0;
+		private int _length = 0;
+		private int _seek = 0;
+		private readonly byte [] _buffer;
 
 		public void PutBit(bool value)
 		{
-			long longValue = value? 1L : 0L;
-			bits |= longValue << currentBitCount;
-			++currentBitCount;
-			WriteIfNecessary();
+			PutBits(value ? 1 : 0, 1);
+		}
+
+		private void AddByte()
+		{
+			while (_currentBitCount >= 8)
+			{
+				Debug.Log("Corta en: " + Convert.ToString(_bits, 2));
+				_buffer[_seek++] = (byte) _bits;
+				_length++;
+				_currentBitCount -= 8;
+				_bits >>= 8;
+			}
 		}
 
 		public void PutBits(long value, int bitCount)
 		{
 			long mask = 0;
-			for (int i = 0; i < bitCount; i++)
+			for(int i=0; i<bitCount;i++)
 			{
 				mask <<= 1;
 				mask++;
 			}
 
-			long longValue = value & mask;
-			bits |= longValue << currentBitCount;
-			currentBitCount += bitCount;
-			WriteIfNecessary();
+			long val = value & mask;
+			_bits |= (val << _currentBitCount);
+			_currentBitCount += bitCount;
+			AddByte();
+
+
 		}
 
 		public void PutInt(int value, int min, int max)
 		{
-			if (value < min || value > max)
-			{
-				throw new InvalidOperationException("Arguments error");
-			}
-			int bitCount = 0;
-			int counter = max - min;
-			while (counter > 0)
-			{
-				counter >>= 1;
-				bitCount++;
-			}
+			int range = max - min;
+			PutBits(value-min,(int)Math.Log(range,2)+1);
 
-			int writeVal = value - min;
-			bits |= writeVal << currentBitCount;
-			currentBitCount += bitCount;
-			WriteIfNecessary();
+		}
+
+		public int GetInt(int min, int max)
+		{
+			int range = max - min;
+			return (int) GetBits((int) Math.Log(range, 2) + 1) + min;
 		}
 
 		public void PutFloat(float value, float min, float max, float step)
 		{
-			
+			int val = (int) ((value - min) / step);
+			int maxi = (int) ((max - min) / step);
+			PutInt(val,0,maxi);
 		}
 
-		public void Flush()
+		public float GetFloat(float min, float max, float step)
 		{
-			
+			int maxi = (int) ((max - min) / step);
+			int val = GetInt(0, maxi);
+			return val * step + min;
 		}
 
+		private void Flush()
+		{
+			_length = 0;
+			_seek = 0;
+			_bits = 0;
+			_currentBitCount = 0;
+
+		}
+
+		public bool GetBit()
+		{
+			return GetBits(1) == 1;
+
+		}
+
+		public long GetBits(int bitcount)
+		{
+			long mask = 0;
+			for (int i = 0; i < bitcount; i++)
+			{
+				mask <<= 1;
+				mask++;
+			}
+			Debug.Log("Mask: "+ Convert.ToString(mask,2));
+			GetByte(bitcount);
+			long ret = _bits & mask;
+			_currentBitCount -= bitcount;
+			_bits >>= bitcount;
+			return ret;
+
+		}
+
+		private void GetByte(int bitcount)
+		{
+			while (_currentBitCount < bitcount)
+			{
+				//_bits <<= 8;
+				_bits |= _buffer[_seek] << _currentBitCount;	// Esta línea tira warning. Falta algún cast para que no lo tire más.
+				
+				Debug.Log("Temp bits: " + Convert.ToString(_bits, 2));
+				Debug.Log("Buffer is: " + Convert.ToString(_buffer[_seek], 2));
+				_seek++;
+				_currentBitCount += 8;
+			}
+			Debug.Log("Bits is: " + Convert.ToString(_bits, 2));
+
+		}
 		public BitBuffer()
 		{
-			buffer = new MemoryStream();
+			_buffer = new byte[512];
 		}
 
-		private void WriteIfNecessary()
+		public BitBuffer(byte[] payload)
 		{
-			if (32 <= currentBitCount)
+			_buffer = new byte[512];
+			for (int i=0;i<payload.Length;i++)
 			{
-				if (4 + buffer.Position > buffer.Capacity)
-				{
-					throw new InvalidOperationException("Write buffer overflow");
-				}
-				int word = (int) bits;
-				byte a = (byte) (word);
-				byte b = (byte) (word >> 8);
-				byte c = (byte) (word >> 16);
-				byte d = (byte) (word >> 24);
-				buffer.WriteByte(d);
-				buffer.WriteByte(c);
-				buffer.WriteByte(b);
-				buffer.WriteByte(a);
-				bits >>= 32;
-				currentBitCount -= 32;
+				_buffer[i] = payload[i];
+				_length++;
 			}
+		}
+
+		public byte[] GetPayload()
+		{
+			byte[] ret = new byte[_length+1];
+			for (int i = 0; i < _length; i++)
+			{
+				
+				ret[i] = _buffer[i];
+			}
+			
+			ret[_length] = (byte)_bits;
+			Debug.Log("Bits: "+Convert.ToString(_bits,2));
+			Flush();
+			return ret;
 		}
 	}
