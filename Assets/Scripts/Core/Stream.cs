@@ -4,9 +4,6 @@
 		/*
 		* Permite almacenar un flujo de paquetes por orden de llegada (FIFO), y
 		* ofrece mecanismos para acceder a ellos. Los accesos son thread-safe.
-		*
-		* @see https://msdn.microsoft.com/en-us/library/system.io.memorystream(v=vs.110).aspx
-		* @see https://msdn.microsoft.com/en-us/library/system.io.binaryreader(v=vs.110).aspx
 		*/
 
 	public class Stream {
@@ -31,6 +28,14 @@
 					return packets.Dequeue();
 				}
 				else return null;
+			}
+		}
+
+		public Queue<Packet> ReadAll() {
+			lock (streamLock) {
+				Queue<Packet> packets = new Queue<Packet>(this.packets);
+				this.packets.Clear();
+				return packets;
 			}
 		}
 

@@ -21,7 +21,7 @@
 
 		// Debería estar en otro lado...
 		protected float lastSnapshot;
-		protected float deltaSnapshot;
+		protected float Δs;
 
 		protected void Awake() {
 			config = GameObject
@@ -33,8 +33,8 @@
 			link = config.GetLink(id);
 			input = new Demultiplexer(config.maxPacketsInQueue);
 			output = new Stream(config.maxPacketsInQueue);
-			lastSnapshot = Time.fixedUnscaledTime;
-			deltaSnapshot = 1.0f/10.0f;
+			lastSnapshot = 0.0f;
+			Δs = 1.0f / config.snapshotsPerSecond;
 		}
 
 		public Demultiplexer GetInputDemultiplexer() {

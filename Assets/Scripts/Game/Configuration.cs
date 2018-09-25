@@ -17,7 +17,10 @@
 		public int maxPacketsInQueue;
 		public int receiveTimeout;
 		public int sendTimeout;
-		public int replicationLag;
+		public int snapshotsPerSecond;
+		public int windowSize;
+		public int lag;
+		public float packetLost;
 
 		// Servicios globales:
 		protected Threading threading;
@@ -26,40 +29,29 @@
 
 		// Estado global:
 		protected bool onEscape;
-		protected bool onStart;
 
-		void Awake() {
-			// Nada por ahora...
+		protected void Awake() {
 		}
 
-		void OnApplicationQuit() {
+		protected void OnApplicationQuit() {
 			Debug.Log("Exiting...");
 			onEscape = true;
-			Thread.Sleep(250);
 			threading.Shutdown();
+			Thread.Sleep(100);
 			Debug.Log("Finish.");
 		}
 
-		void Start() {
+		protected void Start() {
 			Debug.Log("Starting scene...");
 			threading = new Threading(peerIPs.Length);
 			links = new Link [peerIPs.Length];
 			players = new Player [peerIPs.Length];
 			onEscape = false;
-			onStart = false;
 			LoadPlayers().Deploy();
 			Debug.Log("Scene loaded.");
 		}
 
-		void Update() {
-			if (Input.GetKeyDown(KeyCode.Escape)) {
-				Debug.Log("Unplugged.");
-				onEscape = true;
-			}
-			else if (Input.GetKeyDown(KeyCode.Space)) {
-				Debug.Log("Plugged.");
-				onStart = true;
-			}
+		protected void Update() {
 		}
 
 		public Link GetLink(int index) {
@@ -78,23 +70,6 @@
 			return onEscape;
 		}
 
-		public bool OnStart() {
-			return onStart;
-		}
-
-		protected Configuration LoadPlayers() {
-			players[0] = GameObject.Find("LocalPlayer")
-				.GetComponent<LocalPlayer>();
-			for (int i = 1; i < players.Length; ++i) {
-				players[i] = Instantiate(
-					remotePlayerPrefab,
-					respawns[i],
-					Quaternion.identity)
-						.GetComponent<RemotePlayer>();
-			}
-			return this;
-		}
-
 		protected Configuration Deploy() {
 			for (int i = 0; i < players.Length; ++i) {
 				Player player = players[i];
@@ -107,6 +82,19 @@
 					.SendTimeout(sendTimeout)
 					.Build();
 				threading.Submit(i, new ThreadStart(player.Replicate));
+			}
+			return this;
+		}
+
+		protected Configuration LoadPlayers() {
+			players[0] = GameObject.Find("LocalPlayer")
+				.GetComponent<LocalPlayer>();
+			for (int i = 1; i < players.Length; ++i) {
+				players[i] = Instantiate(
+					remotePlayerPrefab,
+					respawns[i],
+					Quaternion.identity)
+						.GetComponent<RemotePlayer>();
 			}
 			return this;
 		}

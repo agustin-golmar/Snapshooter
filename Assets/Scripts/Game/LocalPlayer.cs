@@ -1,5 +1,4 @@
 ﻿
-	using System.Threading;
 	using UnityEngine;
 
 		/*
@@ -14,32 +13,27 @@
 		private const string KEY_S = "s";
 		private const string KEY_D = "d";
 
-		// N° de secuencia local:
-		protected int sequence;
-
 		// Velocidad, en [m/s]:
 		public float speed;
 
-		protected new void Start() {
-			base.Start();
-			sequence = 0;
-		}
-
 		protected void Update() {
 			Move();
-			float currentTime = Time.fixedUnscaledTime;
-			if (deltaSnapshot < currentTime - lastSnapshot) {
+			int currentTime = Mathf.FloorToInt(Time.unscaledTime/Δs);
+			if (lastSnapshot < currentTime) {
 				lastSnapshot = currentTime;
-				Debug.Log("Frame " + Time.frameCount + " -> " + currentTime + " sec.");
+				//Debug.Log("Frame " + Time.frameCount + " -> " + Time.unscaledTime + " sec. | Secuencia: " + currentTime);
 				Packet packet = new Packet.Builder(config.maxPacketSize)
 					.AddPacketType(PacketType.SNAPSHOT)
-					.AddInteger(sequence++)
-					.AddFloat(currentTime)
+					.AddInteger(currentTime++)
+					.AddFloat(Time.unscaledTime)
 					.AddVector(transform.position)
 					.AddQuaternion(transform.rotation)
 					.Build();
 				output.Write(packet);
 			}
+		}
+
+		protected void FixedUpdate() {
 		}
 
 		protected void LateUpdate() {
@@ -67,16 +61,12 @@
 		}
 
 		public override void Replicate() {
-			// UDP puede ser lento debido a ARP. Non-blocking?
-			while (!config.OnStart()) {
-				Thread.Sleep(100);
-			}
+			// UDP puede ser lento debido a ARP. Usar Non-blocking?
 			while (!config.OnEscape()) {
 				// Enviar también ACKs hacia los demás links.
 				// Para esto se utilizan los output buffers de los RemotePlayer's.
 				// Deberia utilizarse otro thread con round-robin.
 				link.Multicast(config.GetLinks(), 1, output);
-				Thread.Sleep(config.replicationLag);
 			}
 		}
 	}

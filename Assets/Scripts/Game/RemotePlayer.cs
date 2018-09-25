@@ -1,4 +1,5 @@
 ﻿
+	using System.Collections.Generic;
 	using System.Threading;
 	using UnityEngine;
 
@@ -10,41 +11,31 @@
 
 		protected SnapshotInterpolator interpolator;
 
-		public RemotePlayer() {
-			// Interpolar de a 2 snapshots (no puede ser menos de 2), a 10 SPS:
-			interpolator = new SnapshotInterpolator(2, 10);
+		protected void FixedUpdate() {
+		}
+
+		protected new void Start() {
+			base.Start();
+			interpolator = new SnapshotInterpolator(config.windowSize, config.snapshotsPerSecond);
 		}
 
 		protected void Update() {
-			// Obtener todas las snapshots disponibles:
-			while (true) {
-				Packet packet = input.Read(PacketType.SNAPSHOT);
-				if (packet != null) {
-					interpolator.AddPacket(packet);
-					Debug.Log("Nuevo paquete de snapshot agregado.");
-				}
-				else break;
-			}
-			// Se puede interpolar, sólo si hay snapshots:
+			//Debug.Log("Frame " + Time.frameCount + " -> " + Time.unscaledTime + " sec.");
+			Queue<Packet> packets = input.ReadAll(PacketType.SNAPSHOT);
+			interpolator.AddPackets(packets);
 			Snapshot snapshot = interpolator.GetSnapshot();
 			if (snapshot != null) {
 				transform.SetPositionAndRotation(snapshot.GetPosition(), snapshot.GetRotation());
-				/* hack */transform.Translate(0.0f, 1.0f, 0.0f);
+				transform.Translate(0.0f, 1.0f, 0.0f); /* hack */
 			}
 			else {
-				Debug.Log("\tNo se puede interpolar, la snapshot es nula.");
+				//Debug.Log(">>> No se pudo interpolar.");
 			}
-		}
-
-		public override bool ShouldBind() {
-			return false;
 		}
 
 		public override void Replicate() {
 			Debug.Log("Enemy deployed: " + config.peerIPs[id] + ":" + config.peerPorts[id]);
-			while (!config.OnStart()) {
-				Thread.Sleep(100);
-			}
+			Thread.Sleep(100);
 			Demultiplexer localInput = config.GetPlayer(0).GetInputDemultiplexer();
 			Link localLink = config.GetLink(0);
 			while (!config.OnEscape()) {
@@ -65,8 +56,11 @@
 							break;
 						}
 					}
-					Thread.Sleep(config.replicationLag);
 				}
 			}
+		}
+
+		public override bool ShouldBind() {
+			return false;
 		}
 	}

@@ -2,14 +2,14 @@
 	using UnityEngine;
 
 		/*
-		* Representa el estado dinámico del sistema, que debe serializarse.
+		* Representa el estado dinámico del sistema, el cual debe serializarse.
 		*/
 
 	public class Snapshot {
 
 		// Timestamp y N° de secuencia de la snapshot:
-		protected readonly float timestamp;
 		protected readonly int sequence;
+		protected readonly float timestamp;
 
 		// Propiedades del jugador:
 		protected readonly Vector3 position;
@@ -19,18 +19,34 @@
 		// ...
 
 		public Snapshot(Builder builder) {
-			timestamp = builder.timestamp;
 			sequence = builder.sequence;
+			timestamp = builder.timestamp;
 			position = builder.position;
 			rotation = builder.rotation;
 		}
 
-		public float GetTimestamp() {
-			return timestamp;
+		public Snapshot(Packet packet) {
+			packet.Reset(1);
+			sequence = packet.GetInteger();
+			timestamp = packet.GetFloat();
+			position = packet.GetVector();
+			rotation = packet.GetQuaternion();
+			packet.Reset();
+		}
+
+		public Snapshot(Snapshot from, Snapshot to, float Δn) {
+			sequence = from.GetSequence();
+			timestamp = Time.unscaledTime;
+			position = Vector3.Lerp(from.GetPosition(), to.GetPosition(), Δn);
+			rotation = Quaternion.Slerp(from.GetRotation(), to.GetRotation(), Δn);
 		}
 
 		public int GetSequence() {
 			return sequence;
+		}
+
+		public float GetTimestamp() {
+			return timestamp;
 		}
 
 		public Vector3 GetPosition() {
@@ -43,18 +59,18 @@
 
 		public class Builder {
 
-			public float timestamp;
 			public int sequence;
+			public float timestamp;
 			public Vector3 position;
 			public Quaternion rotation;
 
-			public Builder Timestamp(float timestamp) {
-				this.timestamp = timestamp;
+			public Builder Sequence(int sequence) {
+				this.sequence = sequence;
 				return this;
 			}
 
-			public Builder Sequence(int sequence) {
-				this.sequence = sequence;
+			public Builder Timestamp(float timestamp) {
+				this.timestamp = timestamp;
 				return this;
 			}
 

@@ -306,7 +306,10 @@ MonoBehaviour:
   maxPacketsInQueue: 10
   receiveTimeout: 50
   sendTimeout: 50
-  replicationLag: 20
+  snapshotsPerSecond: 10
+  windowSize: 2
+  lag: 0
+  packetLost: 0.05
 --- !u!4 &684639884
 Transform:
   m_ObjectHideFlags: 0

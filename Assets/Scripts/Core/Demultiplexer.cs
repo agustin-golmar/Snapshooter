@@ -1,5 +1,6 @@
 ﻿
 	using System;
+	using System.Collections.Generic;
 
 		/*
 		* Permite demultiplexar un stream de paquetes en varios streams, uno
@@ -24,6 +25,10 @@
 
 		public Packet Read(PacketType type) {
 			return GetStream(type).Read();
+		}
+
+		public Queue<Packet> ReadAll(PacketType type) {
+			return GetStream(type).ReadAll();
 		}
 
 		public Packet SoftRead(PacketType type) {

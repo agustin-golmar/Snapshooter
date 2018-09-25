@@ -9,135 +9,206 @@
 	public class SnapshotInterpolator {
 
 		protected readonly Queue<Snapshot> snapshots;
-		protected readonly int windowSize;
-		protected readonly int sps;
+		protected readonly int window;
 		protected readonly float Δs;
 
-		// Testing...
-		protected int lastSequence;
 		protected float baseTime;
-		protected Snapshot left;
-		protected Snapshot right;
+		protected float timestamp;
+		protected int lastSequence;
+		protected Snapshot from;
+		protected Snapshot to;
 
 		public SnapshotInterpolator(int windowSize, int sps) {
-			this.windowSize = windowSize;
-			this.sps = sps;
+			window = windowSize;
 			snapshots = new Queue<Snapshot>();
 			lastSequence = -1;
 			Δs = 1.0f/sps;
-			left = null;
-			right = null;
+			timestamp = -1.0f;
 			baseTime = -1.0f;
-		}
-
-		public SnapshotInterpolator SetBaseTime(float baseTime) {
-			this.baseTime = baseTime;
-			return this;
+			from = null;
+			to = null;
 		}
 
 		public SnapshotInterpolator AddPacket(Packet packet) {
-			packet.Reset(1); // Jump packet-type
-			int sequence = packet.GetInteger();
-			if (lastSequence < sequence) {
-				lastSequence = sequence;
-				Snapshot snapshot = new Snapshot.Builder()
-					.Sequence(sequence)
-					.Timestamp(packet.GetFloat())
-					.Position(packet.GetVector())
-					.Rotation(packet.GetQuaternion())
-					.Build();
+			Snapshot snapshot = new Snapshot(packet);
+			if (lastSequence < snapshot.GetSequence()) {
+				if (lastSequence < 0) {
+					baseTime = Time.unscaledTime - GetTimeForSequence(snapshot.GetSequence());
+					Debug.Log("\tBase time: " + baseTime);
+				}
+				lastSequence = snapshot.GetSequence();
 				snapshots.Enqueue(snapshot);
-				if (baseTime < 0.0f) {
-					baseTime = snapshot.GetTimestamp();
-					Debug.Log("\t\tSe seteó el primer timestamp a " + baseTime + " segs.");
-				}
-				if (windowSize < snapshots.Count) {
-					// Solo se retienen 'windowSize' snapshots...
-					snapshots.Dequeue();
-					Debug.Log("Se eliminó una snapshot antigua.");
-				}
+				Debug.Log("\tSecuencia agregada: " + snapshot.GetSequence());
 			}
 			else {
-				// Drop packet...
+				Debug.Log("\tSe eliminó un paquete porque su secuencia es antigua (" + snapshot.GetSequence() + ", last = " + lastSequence + ").");
 			}
-			packet.Reset();
+			return this;
+		}
+
+		public SnapshotInterpolator AddPackets(Queue<Packet> packets) {
+			if (lastSequence < 0) {
+				while (1 < packets.Count) {
+					packets.Dequeue();
+				}
+			}
+			foreach (Packet packet in packets) {
+				AddPacket(packet);
+			}
 			return this;
 		}
 
 		public Snapshot GetSnapshot() {
-			if (0 < snapshots.Count) {
-				// No interpola en lo absoluto...
-				return snapshots.Dequeue();
+			// Agregar verificación de secuencias corridas y validar ventana.
+			SlideWindow().TrySetTimestamp();
+			if (CanInterpolate()) {
+				float Δt = GetInterpolationDelta();
+				float Δn = Δt/Δs;
+				Debug.Log("\tDelta Δt = " + Δt);
+				Debug.Log("\tClamp Δn = " + 100*Δn + " %");
+				return new Snapshot(from, to, Δn);
 			}
 			else return null;
 		}
 
-		/*public SnapshotInterpolator CleanOldSnapshots(int sequence) {
-			// Revisar las secuencias en la cola.
-			// Si la secuencia del tope es menor por 1, cargarla en left.
-			// Cargar el siguiente en right.
+		/// <summary>
+		/// Indica si se puede aplicar o no una interpolación. Para que se
+		/// aplique dicho proceso, deben existir dos snapshots, una por defecto
+		/// y otra por exceso, en relación al tiempo de interpolación.
+		/// </summary>
+		/// <returns></returns>
+		protected bool CanInterpolate() {
+			return from != null && to != null;
+		}
+
+		/// <summary>
+		/// Devuelve el tiempo dentro del intervalo de interpolación.
+		/// </summary>
+		protected float GetInterpolationDelta() {
+			return GetInterpolationTime() - timestamp;
+		}
+
+		/// <summary>
+		/// Devuelve el tiempo actual de interpolación, lo que implica tener en
+		/// cuenta un tiempo de base, y un retraso provocado por la ventana de
+		/// interpolación.
+		/// </summary>
+		/// <returns>El tiempo actual de interpolación.</returns>
+		protected float GetInterpolationTime() {
+			return Time.unscaledTime - baseTime - Δs;
+		}
+
+		/// <summary>
+		/// Intenta hallar una snapshot cuyo tiempo sea inmediatamente anterior
+		/// al indicado.
+		/// </summary>
+		/// <param name = "time">El tiempo indicado.</param>
+		/// <returns>Una snapshot cuyo tiempo es mayor o igual al
+		/// indicado.</returns>
+		protected Snapshot GetSnapshotByDefault(float time) {
+			Snapshot defaultSnapshot = null;
 			while (0 < snapshots.Count) {
 				Snapshot snapshot = snapshots.Peek();
-				if (snapshot.GetSequence() == sequence - 1) {
-					left = snapshots.Dequeue();
-				}
-				else if (snapshot.GetSequence() < sequence) {
+				float t = GetTimeForSequence(snapshot.GetSequence());
+				if (t <= time) {
+					defaultSnapshot = snapshot;
 					snapshots.Dequeue();
+				}
+				else break;
+			}
+			return defaultSnapshot;
+		}
+
+		/// <summary>
+		/// Intenta hallar una snapshot cuyo tiempo asociado se encuentre
+		/// inmediatamente por encima del especificado.
+		/// </summary>
+		/// <param name = "time">El tiempo especificado.</param>
+		/// <returns>Una snapshot cuyo tiempo sea estrictamente mayor al
+		/// indicado, o null en otro caso.</returns>
+		protected Snapshot GetSnapshotByExcess(float time) {
+			Snapshot excessSnapshot = null;
+			while (0 < snapshots.Count) {
+				Snapshot snapshot = snapshots.Peek();
+				float t = GetTimeForSequence(snapshot.GetSequence());
+				if (time < t) {
+					excessSnapshot = snapshot;
+					snapshots.Dequeue();
+					break;
+				}
+				else snapshots.Dequeue();
+			}
+			return excessSnapshot;
+		}
+
+		/// <summary>
+		/// Devuelve el tiempo asociado al número de secuencia indicado, como
+		/// múltiplos del factor Δs.
+		/// </summary>
+		/// <param name = "sequence">El número de secuencia.</param>
+		/// <returns>El tiempo en segundos.</returns>
+		protected float GetTimeForSequence(int sequence) {
+			return sequence * Δs;
+		}
+
+		protected SnapshotInterpolator SlideWindow() {
+			float t = GetInterpolationTime();
+			Debug.Log("\tInterpolation time: " + t);
+			if (from == null) {
+				from = GetSnapshotByDefault(t);
+				if (from != null) Debug.Log("\t\tNew default time (from): " + GetTimeForSequence(from.GetSequence()));
+				else Debug.Log("\t\tNo se puede encontrar una snapshot por defecto (from).");
+			}
+			else {
+				float fromTime = GetTimeForSequence(from.GetSequence());
+				if (fromTime <= t && t < fromTime + Δs) {
+					Debug.Log("\t\tDefault (from), todavía no venció: " + fromTime);
+				}
+				else {
+					SwitchSnapshots();
+				}
+			}
+			if (from != null) {
+				if (to == null) {
+					to = GetSnapshotByExcess(t);
+					if (to != null) Debug.Log("\t\tNew excess time (to): " + GetTimeForSequence(to.GetSequence()));
+					else Debug.Log("\t\tNo se puede encontrar una snapshot por exceso (to).");
+				}
+				else {
+					float toTime = GetTimeForSequence(to.GetSequence());
+					if (t < toTime) {
+						Debug.Log("\t\tExcess (to), todavía no venció: " + toTime);
+					}
+					else {
+						to = GetSnapshotByExcess(t);
+						if (to != null) Debug.Log("\t\tNew excess time (to): " + GetTimeForSequence(from.GetSequence()));
+						else Debug.Log("\t\tNo se puede encontrar una snapshot por exceso (to).");
+					}
 				}
 			}
 			return this;
-		}*/
+		}
 
-		// Qué pasa cuando hay packet-loss?
-		/*public Snapshot GetSnapshot() {
-			// Computar el número de secuencia correcto para el tiempo actual.
-			float currentTime = Time.fixedUnscaledTime;
-			float Δt = currentTime - baseTime; // Puede ser negativo!
-			float n = Δt/Δs;
-			Debug.Log("Δt = " + Δt);
-			int sequence = (int) Mathf.Floor(n);
-			Debug.Log("Secuencia computada esperada: " + sequence);
-			Debug.Log("Última secuencia disponible: " + lastSequence);
+		/// <summary>
+		/// Intercambia las snapshots por defecto y exceso, para que la
+		/// interpolación avance correctamente.
+		/// </summary>
+		protected SnapshotInterpolator SwitchSnapshots() {
+			timestamp = -1.0f;
+			from = to;
+			to = null;
+			return SlideWindow().TrySetTimestamp();
+		}
 
-			if (left == null && right == null) {
-				if (1 < snapshots.Count) {
-					// Al menos debe haber 2...
-					right = snapshots.Dequeue();
-					left = snapshots.Dequeue();
-				}
-				else return null;
+		/// <summary>
+		/// En caso de que se pueda aplicar una interpolación en los próximos
+		/// intervalos, se computa el tiempo base para esa interpolación. Esto
+		/// permite computar el punto de interpolación entre dos snapshots.
+		/// </summary>
+		protected SnapshotInterpolator TrySetTimestamp() {
+			if (CanInterpolate() && timestamp < 0) {
+				timestamp = GetInterpolationTime();
 			}
-			else {
-				// Solo right es nulo;
-			}
-			Debug.Log("\t\t(baseTime, timestamp) = (" + baseTime + ", " + left.GetTimestamp() + ")");
-
-			// En este punto, left y right poseen snapshots.
-			if (sequence < left.GetSequence()) {
-				// La secuencia necesaria es muy vieja. No sé si llega a pasar...
-				Debug.Log("Secuencia requerida muy vieja!: " + sequence);
-				Debug.Log("Última secuencia es: " + lastSequence);
-			}
-			else if (right.GetSequence() < sequence) {
-				// Se requiere una secuencia más nueva.
-				Debug.Log("Secuencia requerida muy nueva!: " + sequence);
-				Debug.Log("Última secuencia es: " + lastSequence);
-				CleanOldSnapshots(sequence);
-				// Debo avanzar a un par de snapshots correctas...
-			}
-			else {
-				// Entre left y right.
-				Debug.Log("La secuencia se encuentra entre left y right, como era esperado...");
-				Debug.Log("(l, s, r) = (" + left.GetSequence() + ", " + sequence + ", " + right.GetSequence() + ")");
-			}
-
-			float Δn = Δt - sequence * Δs;
-			Debug.Log("Clamped Δn: " + Δn + "\n");
-			return new Snapshot()
-				.Sequence(sequence)
-				.Timestamp(Δt)
-				.Position(Vector3.Lerp(left.GetPosition(), right.GetPosition(), Δn))
-				.Rotation(Quaternion.Slerp(left.GetRotation(), right.GetRotation(), Δn))
-				.Build();
-		}*/
+			return this;
+		}
 	}
