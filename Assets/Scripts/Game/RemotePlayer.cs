@@ -35,7 +35,7 @@
 
 		public override void Replicate() {
 			Debug.Log("Enemy deployed: " + config.peerIPs[id] + ":" + config.peerPorts[id]);
-			Thread.Sleep(100);
+			Thread.Sleep(200);
 			Demultiplexer localInput = config.GetPlayer(0).GetInputDemultiplexer();
 			Link localLink = config.GetLink(0);
 			while (!config.OnEscape()) {
@@ -44,6 +44,7 @@
 					Packet packet = new Packet(payload);
 					PacketType type = packet.GetPacketType();
 					packet.Reset();
+					Debug.Log("Remote receive: " + type);
 					switch (type) {
 						case PacketType.ACK : {
 							localInput.Write(type, packet);
