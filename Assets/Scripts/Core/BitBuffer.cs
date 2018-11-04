@@ -112,7 +112,9 @@
 			while (_currentBitCount < bitcount)
 			{
 				//_bits <<= 8;
-				_bits |= _buffer[_seek] << _currentBitCount;	// Esta línea tira warning. Falta algún cast para que no lo tire más.
+				// Esta línea tira warning. Falta algún cast para que no lo tire más.
+				// El cast a (uint), no estaba. Está bien así?
+				_bits |= (uint) _buffer[_seek] << _currentBitCount;
 				
 				Debug.Log("Temp bits: " + Convert.ToString(_bits, 2));
 				Debug.Log("Buffer is: " + Convert.ToString(_buffer[_seek], 2));

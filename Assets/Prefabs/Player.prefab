@@ -22,9 +22,9 @@ GameObject:
   - component: {fileID: 33082811120005642}
   - component: {fileID: 23585710933132676}
   - component: {fileID: 135218294848937416}
-  - component: {fileID: 114134279474541270}
+  - component: {fileID: 114170450352493254}
   m_Layer: 0
-  m_Name: RemotePlayer
+  m_Name: Player
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -85,7 +85,7 @@ MeshFilter:
   m_PrefabInternal: {fileID: 100100000}
   m_GameObject: {fileID: 1593502636087912}
   m_Mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
---- !u!114 &114134279474541270
+--- !u!114 &114170450352493254
 MonoBehaviour:
   m_ObjectHideFlags: 1
   m_CorrespondingSourceObject: {fileID: 0}
@@ -93,7 +93,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 1593502636087912}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 073eca09660c12d47b6585d58385fb60, type: 3}
+  m_Script: {fileID: 11500000, guid: 17784fffa3aa324458be0fdf3db77d58, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
 --- !u!135 &135218294848937416
