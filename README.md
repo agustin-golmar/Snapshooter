@@ -23,9 +23,9 @@ __"Multiplayer Game Programming: Architecting Networked Games"__. Joshua
 Glazer, Sanjay Madhav. _Addison-Wesley. ISBN 978-0134034300. November, 2015_.
 
 __"Fast-Paced Multiplayer (Part I): Client-Server Game Architecture"__. Gabriel
-Gambetta. _[](http://www.gabrielgambetta.com/client-server-game-architecture.html).
+Gambetta. _[http://www.gabrielgambetta.com/](http://www.gabrielgambetta.com/client-server-game-architecture.html).
 Accessed in late 2018_.
 
 __"Snapshot Interpolation: Interpolating Between Snapshots of Visual State"__.
-Glenn Fiedler. _[](https://gafferongames.com/post/snapshot_interpolation/).
+Glenn Fiedler. _[https://gafferongames.com/](https://gafferongames.com/post/snapshot_interpolation/).
 Sunday, November 30, 2014_.
