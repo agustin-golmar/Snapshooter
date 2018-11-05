@@ -118,7 +118,8 @@ public class Client : IClosable {
 		packet.Reset(1);
 		id = packet.GetInteger();
 		Debug.Log("Cliente conectado con HP = " + packet.GetInteger() + "! El servidor envió el ID = " + id + ".");
-		config.CreatePlayer(packet.GetVector(), packet.GetQuaternion());
+		config.CreatePlayer(packet.GetVector(), packet.GetQuaternion())
+			.LoadWorld(config, snapshot);
 		packet.Reset();
 	}
 }

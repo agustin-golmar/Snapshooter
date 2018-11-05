@@ -309,9 +309,10 @@ MonoBehaviour:
   clientSendTimeout: 20
   snapshotsPerSecond: 10
   slidingWindowSize: 2
-  usePrediction: 0
+  usePrediction: 1
   lag: 0
   packetLossRatio: 0.05
+  playerSpeed: 5
 --- !u!4 &684639884
 Transform:
   m_ObjectHideFlags: 0

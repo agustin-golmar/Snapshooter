@@ -55,6 +55,9 @@ public class Configuration : MonoBehaviour {
 	// Porcentaje de pérdida de paquetes:
 	public float packetLossRatio;
 
+	// Velocidad de los jugadores en [m/s]:
+	public float playerSpeed;
+
 	/*************************************************************************/
 
 	// Instancia del servidor y del cliente:
@@ -67,19 +70,6 @@ public class Configuration : MonoBehaviour {
 	// Indica si se debe abortar la ejecución:
 	protected bool onExit;
 
-	/*************************************************************************/
-
-	public bool OnExit() {
-		return onExit;
-	}
-
-	public Player CreatePlayer(Vector3 position, Quaternion rotation) {
-		return Instantiate(playerPrefab, position, rotation)
-			.GetComponent<Player>();
-	}
-
-	/*************************************************************************/
-
 	protected void Start() {
 		Debug.Log("Starting scene...");
 		onExit = false;
@@ -90,7 +80,7 @@ public class Configuration : MonoBehaviour {
 			resources.Add(server);
 			server.Raise();
 		}
-		Debug.Log("Loading client...");
+		Debug.Log("Loading client instance...");
 		client = new Client(this);
 		resources.Add(client);
 		client.Raise();
@@ -112,5 +102,14 @@ public class Configuration : MonoBehaviour {
 		}
 		resources.Clear();
 		Debug.Log("Finished.");
+	}
+
+	public bool OnExit() {
+		return onExit;
+	}
+
+	public Player CreatePlayer(Vector3 position, Quaternion rotation) {
+		return Instantiate(playerPrefab, position, rotation)
+			.GetComponent<Player>();
 	}
 }

@@ -85,7 +85,7 @@ public class Server : IClosable {
 	* evitar colisiones, siempre que sea posible.
 	*/
 	public Vector3 GetRespawn(int id) {
-		return new Vector3(4 * id - 2 * config.maxPlayers, 0, 0);
+		return new Vector3(4 * id - 2 * config.maxPlayers, 1.0f, 0);
 	}
 
 	/**
