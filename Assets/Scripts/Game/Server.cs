@@ -1,9 +1,8 @@
 ﻿using System.Collections.Generic;
+using System.Net;
 using UnityEngine;
 
 public class Server : IClosable {
-
-	public const int SERVER_LINK = 0;
 
 	protected Configuration config;
 	protected Demultiplexer input;
@@ -24,11 +23,11 @@ public class Server : IClosable {
 			.Bind(true)
 			.IP("0.0.0.0")
 			.Port(config.serverListeningPort)
-			.ReceiveTimeout(config.receiveTimeout)
-			.SendTimeout(config.sendTimeout)
+			.ReceiveTimeout(config.serverReceiveTimeout)
+			.SendTimeout(config.serverSendTimeout)
 			.Build();
 		links = new List<Link>();
-		snapshot = new Snapshot();
+		snapshot = new Snapshot(config.maxPlayers);
 		lastSnapshot = 0.0f;
 		Δs = 1.0f / config.snapshotsPerSecond;
 	}
@@ -58,35 +57,35 @@ public class Server : IClosable {
 	}
 
 	/**
-	* Aplica round-robin: por cada enlace de entrada (cada cliente conectado), lee
-	* un paquete (si puede), y lo agrega al Demultiplexer.
+	* Agrega un nuevo cliente a la partida, creando su entidad y generando un
+	* identificador único para él (el cual retorna). Si no se aceptan más
+	* jugadores porque la sala está llena, se devuelve -1.
 	*/
-	protected void ProcessInput() {
-		while (!config.OnExit()) {
-			int id = 0;
-			foreach (Link link in links) {
-				Debug.Log("Receiving from client " + id + "...");
-				byte [] payload = local.Receive(link);
-				Packet packet = new Packet(payload);
-				input.Write(packet);
-				++id;
-			}
+	public int JoinClient(string address, int port) {
+		if (links.Count < config.maxPlayers) {
+			int id = links.Count;
+			links.Add(new Link.Builder()
+				.Bind(false)
+				.IP(address)
+				.Port(port)
+				.ReceiveTimeout(config.serverReceiveTimeout)
+				.SendTimeout(config.serverSendTimeout)
+				.Build());
+			++snapshot.players;
+			snapshot.Life(id, 100)
+				.Position(id, GetRespawn(id))
+				.Rotation(id, Quaternion.identity);
+			return id;
 		}
+		else return -1;
 	}
 
 	/**
-	* Aplica round-robin: para cada stream de salida, si hay algún paquete lo
-	* envía y continúa con el siguiente stream.
+	* Devuelve el siguiente punto de respawn para el cliente indicado. Debería
+	* evitar colisiones, siempre que sea posible.
 	*/
-	protected void ProcessOutput() {
-		while (!config.OnExit()) {
-			int id = 0;
-			foreach (Stream output in outputs) {
-				Debug.Log("Sending to client " + id + "...");
-				local.Send(links[id], output);
-				++id;
-			}
-		}
+	public Vector3 GetRespawn(int id) {
+		return new Vector3(4 * id - 2 * config.maxPlayers, 0, 0);
 	}
 
 	/**
@@ -99,13 +98,79 @@ public class Server : IClosable {
 		if (lastSnapshot < currentSnapshot) {
 			lastSnapshot = currentSnapshot;
 			Debug.Log("Snapshooting at " + Time.unscaledTime + " sec. (snapshot " + currentSnapshot + ")");
-			// Generar snapshot global y enviar a todos, es decir, agrear a todos los outputs.
-			/*
-			Packet packet = null;
+			snapshot.sequence = currentSnapshot;
+			snapshot.timestamp = Time.unscaledTime;
+			Packet packet = snapshot.ToPacket();
 			foreach (Stream output in outputs) {
 				output.Write(packet);
 			}
-			*/
+		}
+	}
+
+	/**
+	* Aplica round-robin: por cada enlace de entrada (cada cliente conectado), lee
+	* un paquete (si puede), y lo agrega al Demultiplexer.
+	*/
+	protected void ProcessInput() {
+		IPEndPoint anyLink = new IPEndPoint(IPAddress.Any, 0);
+		while (!config.OnExit()) {
+			//int id = 0;
+			// Si la sala no está llena:
+			if (links.Count < config.maxPlayers) {
+				byte [] payload = local.Receive(anyLink);
+				if (payload != null) {
+					Packet packet = new Packet(payload);
+					PacketType type = packet.GetPacketType();
+					// Sacar afuera este switch!!!
+					switch (type) {
+						case PacketType.EVENT : {
+							string address = packet.GetString();
+							int port = packet.GetInteger();
+							Debug.Log("Event received from " + address + ":" + port + "...");
+							int client = JoinClient(address, port);
+							Packet response = new Packet.Builder(48)
+									.AddPacketType(PacketType.ACK)
+									.AddInteger(client)
+									.AddInteger(snapshot.lifes[client])
+									.AddVector(snapshot.positions[client])
+									.AddQuaternion(snapshot.rotations[client])
+									.Build();
+							local.Send(new IPEndPoint(IPAddress.Parse(address), port), response);
+							break;
+						}
+						default : {
+							input.Write(packet.Reset());
+							break;
+						}
+					}
+				}
+			}
+			// Para los jugadores ya conectados:
+			/*foreach (Link link in links) {
+				byte [] payload = local.Receive(link);
+				if (payload != null) {
+					Debug.Log("Receiving from client " + id + "...");
+					Packet packet = new Packet(payload);
+					input.Write(packet);
+				}
+				++id;
+			}*/
+		}
+	}
+
+	/**
+	* Aplica round-robin: para cada stream de salida, si hay algún paquete lo
+	* envía y continúa con el siguiente stream.
+	*/
+	protected void ProcessOutput() {
+		while (!config.OnExit()) {
+			int id = 0;
+			foreach (Stream output in outputs) {
+				if (0 < local.Send(links[id], output)) {
+					Debug.Log("Sending to client " + id + "...");
+				}
+				++id;
+			}
 		}
 	}
 }

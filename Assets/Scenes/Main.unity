@@ -303,8 +303,10 @@ MonoBehaviour:
   maxPlayers: 8
   maxPacketSize: 128
   maxPacketsInQueue: 10
-  receiveTimeout: 20
-  sendTimeout: 20
+  serverReceiveTimeout: 10
+  serverSendTimeout: 10
+  clientReceiveTimeout: 20
+  clientSendTimeout: 20
   snapshotsPerSecond: 10
   slidingWindowSize: 2
   usePrediction: 0

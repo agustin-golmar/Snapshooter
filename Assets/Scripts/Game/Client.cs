@@ -8,6 +8,7 @@ public class Client : IClosable {
 	protected Threading threading;
 	protected Link local;
 	protected Link server;
+	protected Snapshot snapshot;
 	protected int id;
 
 	public Client(Configuration configuration) {
@@ -20,16 +21,17 @@ public class Client : IClosable {
 			.Bind(true)
 			.IP("0.0.0.0")
 			.Port(config.clientListeningPort)
-			.ReceiveTimeout(config.receiveTimeout)
-			.SendTimeout(config.sendTimeout)
+			.ReceiveTimeout(config.clientReceiveTimeout)
+			.SendTimeout(config.clientSendTimeout)
 			.Build();
 		server = new Link.Builder()
 			.Bind(false)
 			.IP(config.serverAddress)
 			.Port(config.serverListeningPort)
-			.ReceiveTimeout(config.receiveTimeout)
-			.SendTimeout(config.sendTimeout)
+			.ReceiveTimeout(config.serverReceiveTimeout)
+			.SendTimeout(config.serverSendTimeout)
 			.Build();
+		snapshot = new Snapshot(config.maxPlayers);
 		id = -1;
 	}
 
@@ -45,13 +47,27 @@ public class Client : IClosable {
 
 	/**
 	* Levanta los threads de entrada y salida de paquetes, efectivamente
-	* comenzando a recibir y enviar información hacia el servidor.
+	* comenzando a recibir y enviar información hacia el servidor. Además,
+	* envía un paquete solicitando conectarse al servidor, junto con su
+	* dirección IP y puerto.
 	*/
 	public void Raise() {
 		Debug.Log("Client listening on 0.0.0.0:" + config.clientListeningPort + "...");
 		Debug.Log("\twith link to server on " + config.serverAddress + ":" + config.serverListeningPort + ".");
 		threading.Submit(ProcessInput);
 		threading.Submit(ProcessOutput);
+		TryConnect();
+	}
+
+	/**
+	* Bucle principal del cliente.
+	*/
+	public void Process() {
+		Packet packet = input.Read(PacketType.ACK);
+		if (packet != null) {
+			Debug.Log("Connection ACK received...");
+			FinishConnect(packet);
+		}
 	}
 
 	/**
@@ -59,10 +75,12 @@ public class Client : IClosable {
 	*/
 	protected void ProcessInput() {
 		while (!config.OnExit()) {
-			Debug.Log("Receiving from server...");
 			byte [] payload = local.Receive(server);
-			Packet packet = new Packet(payload);
-			input.Write(packet);
+			if (payload != null) {
+				Debug.Log("Receiving from server (" + payload.Length + " bytes)...");
+				Packet packet = new Packet(payload);
+				input.Write(packet);
+			}
 		}
 	}
 
@@ -71,8 +89,9 @@ public class Client : IClosable {
 	*/
 	protected void ProcessOutput() {
 		while (!config.OnExit()) {
-			Debug.Log("Sending to server...");
-			local.Send(server, output);
+			if (0 < local.Send(server, output)) {
+				Debug.Log("Sending to server...");
+			}
 		}
 	}
 
@@ -81,10 +100,25 @@ public class Client : IClosable {
 	* El servidor generará un ID y lo enviará devuelta, indicando que
 	* efectivamente se ha unido. Si la sala estaba llena, recibe un ID
 	* negativo.
-	*
-	* Si el ID es satisfactorio, se debe reenviar en cada mensaje reliable
-	* futuro, sea ACK, EVENT o FLOODING.
 	*/
-	public void Connect() {
+	public void TryConnect() {
+		Packet packet = new Packet.Builder(32)
+			.AddPacketType(PacketType.EVENT)
+			.AddString(config.clientAddress)
+			.AddInteger(config.clientListeningPort)
+			.Build();
+		output.Write(packet);
+	}
+
+	/**
+	* Luego de recibir una conexión satisfactoria, despliega los objetos
+	* necesarios para comenzar la simulación.
+	*/
+	public void FinishConnect(Packet packet) {
+		packet.Reset(1);
+		id = packet.GetInteger();
+		Debug.Log("Cliente conectado con HP = " + packet.GetInteger() + "! El servidor envió el ID = " + id + ".");
+		config.CreatePlayer(packet.GetVector(), packet.GetQuaternion());
+		packet.Reset();
 	}
 }

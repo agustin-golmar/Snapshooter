@@ -7,4 +7,8 @@ public class Player : MonoBehaviour {
 
 	protected void Update() {
 	}
+
+	protected void LateUpdate() {
+		Camera.main.transform.LookAt(transform);
+	}
 }

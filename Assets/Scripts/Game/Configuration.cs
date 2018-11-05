@@ -35,8 +35,10 @@ public class Configuration : MonoBehaviour {
 	public int maxPacketsInQueue;
 
 	// Timeouts para envío y recepción de paquetes:
-	public int receiveTimeout;
-	public int sendTimeout;
+	public int serverReceiveTimeout;
+	public int serverSendTimeout;
+	public int clientReceiveTimeout;
+	public int clientSendTimeout;
 
 	// Snapshots por segundo:
 	public int snapshotsPerSecond;
@@ -55,8 +57,9 @@ public class Configuration : MonoBehaviour {
 
 	/*************************************************************************/
 
-	// Instancia del servidor:
+	// Instancia del servidor y del cliente:
 	protected Server server;
+	protected Client client;
 
 	// Recursos que deben liberarse:
 	protected List<IClosable> resources;
@@ -66,16 +69,12 @@ public class Configuration : MonoBehaviour {
 
 	/*************************************************************************/
 
-	public Server GetServer() {
-		return server;
-	}
-
 	public bool OnExit() {
 		return onExit;
 	}
 
-	public Player CreatePlayer() {
-		return Instantiate(playerPrefab, Vector3.zero, Quaternion.identity)
+	public Player CreatePlayer(Vector3 position, Quaternion rotation) {
+		return Instantiate(playerPrefab, position, rotation)
 			.GetComponent<Player>();
 	}
 
@@ -92,7 +91,7 @@ public class Configuration : MonoBehaviour {
 			server.Raise();
 		}
 		Debug.Log("Loading client...");
-		Client client = new Client(this);
+		client = new Client(this);
 		resources.Add(client);
 		client.Raise();
 		Debug.Log("Scene loaded.");
@@ -102,6 +101,7 @@ public class Configuration : MonoBehaviour {
 		if (isServer) {
 			server.ProcessSnapshot();
 		}
+		client.Process();
 	}
 
 	protected void OnApplicationQuit() {
