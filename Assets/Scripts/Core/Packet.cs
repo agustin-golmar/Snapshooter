@@ -41,6 +41,14 @@ public class Packet {
 		return payload[position++];
 	}
 
+	public Direction GetDirection() {
+		return (Direction) GetByte();
+	}
+
+	public Endpoint GetEndpoint() {
+		return (Endpoint) GetByte();
+	}
+
 	public float GetFloat() {
 		float data = BitConverter.ToSingle(payload, position);
 		position += 4;
@@ -108,6 +116,14 @@ public class Packet {
 		public Builder AddByte(byte data) {
 			payload[position++] = data;
 			return this;
+		}
+
+		public Builder AddDirection(Direction type) {
+			return AddByte((byte) type);
+		}
+
+		public Builder AddEndpoint(Endpoint type) {
+			return AddByte((byte) type);
 		}
 
 		public Builder AddFloat(float data) {
