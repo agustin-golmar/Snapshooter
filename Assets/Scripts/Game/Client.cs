@@ -22,7 +22,7 @@ public class Client : IClosable {
 	protected int sequence;
 	protected SortedDictionary<int,Packet> packets;
 	protected SortedDictionary<int,Packet> timedPackets;
-	protected int timeCounter;
+	protected float lastTime;
 
 	public Client(Configuration configuration) {
 		config = configuration;
@@ -48,7 +48,7 @@ public class Client : IClosable {
 		sequence = 0;
 		packets = new SortedDictionary<int,Packet>();
 		timedPackets = new SortedDictionary<int,Packet>();
-		timeCounter = 0;
+		lastTime = 0;
 		timeout = configuration.timeout;
 	}
 
@@ -149,8 +149,9 @@ public class Client : IClosable {
 			//Debug.Log("Writing seq: "+p.Key);
 			output.Write(p.Value);
 		}
-		timeCounter++;
-		if (timeCounter % timeout == 0) {
+		float curTime = Time.unscaledTime;
+		if (curTime >= lastTime + timeout) {
+			lastTime = curTime;
 			foreach(KeyValuePair<int,Packet> p in timedPackets){
 				output.Write(p.Value);
 			}
