@@ -152,12 +152,11 @@ public class Client : IClosable {
 		timeCounter++;
 		if (timeCounter % timeout == 0) {
 			foreach(KeyValuePair<int,Packet> p in timedPackets){
-			//Debug.Log("Writing seq: "+p.Key);
 				output.Write(p.Value);
 			}
 		}
 
-		//Move(Direction.FORWARD);
+		Move(Direction.FORWARD);
 	}
 
 	/**

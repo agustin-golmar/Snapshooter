@@ -22,6 +22,7 @@ public class Server : IClosable, IAPI {
 	protected Threading threading;
 	protected float lastSnapshot;
 	protected float Δs;
+	protected SortedDictionary<int,Packet>[] acks;
 
 	public Server(Configuration configuration) {
 		config = configuration;
@@ -39,27 +40,44 @@ public class Server : IClosable, IAPI {
 		threading = new Threading();
 		lastSnapshot = 0.0f;
 		Δs = 1.0f / config.snapshotsPerSecond;
+		acks = new SortedDictionary<int, Packet>[config.maxPlayers];
+		for (int i=0;i<config.maxPlayers;i++){
+			acks[i]=new SortedDictionary<int, Packet>();
+		}
 	}
 
 	/**
 	* Según el endpoint del request, despacha el proceso adecuado y devuelve el
 	* response correspondiente.
 	*/
-	protected Packet Dispatch(Packet request) {
+	protected Packet Dispatch(Packet request, int clientId) {
 		Endpoint endpoint = request.Reset(1).GetEndpoint();
+		Packet ret;
+		int seq = request.Reset(2).GetInteger();
+		if (acks[clientId].TryGetValue(seq,out ret)){
+			return ret;
+		}
 		request.Reset();
 		switch (endpoint) {
 			case Endpoint.JOIN : {
-				return Join(request);
+				ret = Join(request);
+				acks[clientId].Add(seq,ret);
+				return ret;
 			}
 			case Endpoint.MOVE : {
-				return Move(request);
+				ret = Move(request);
+				acks[clientId].Add(seq,ret);
+				return ret;
 			}
 			case Endpoint.SHOOT : {
-				return Shoot(request);
+				ret = Shoot(request);
+				acks[clientId].Add(seq,ret);
+				return ret;
 			}
 			case Endpoint.FRAG : {
-				return Frag(request);
+				ret = Frag(request);
+				acks[clientId].Add(seq,ret);
+				return ret;
 			}
 			default : {
 				Debug.Log("Unknown Endpoint: " + endpoint);
@@ -83,10 +101,13 @@ public class Server : IClosable, IAPI {
 			int id = request.Reset(6).GetInteger();
 			request.Reset();
 			// Proceso el mismo, y genero el response:
+			//if (type==PacketType.EVENT) {
+			//	Debug.Log("Recibo Join");
+			//}
 			switch (type) {
 				case PacketType.EVENT :
 				case PacketType.FLOODING : {
-					Packet response = Dispatch(request);
+					Packet response = Dispatch(request,id);
 					if (0 <= id) {
 						local.Send(links[id], response);
 					}
