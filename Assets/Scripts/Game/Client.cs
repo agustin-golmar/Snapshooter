@@ -1,4 +1,6 @@
-﻿using UnityEngine;
+﻿using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
 
 	/**
 	* Representa una instancia de cliente dentro del juego Snapshooter, la cual
@@ -17,6 +19,7 @@ public class Client : IClosable {
 	protected Threading threading;
 	protected int id;
 	protected int sequence;
+	protected SortedDictionary<int,Packet> packets;
 
 	public Client(Configuration configuration) {
 		config = configuration;
@@ -40,6 +43,7 @@ public class Client : IClosable {
 		threading = new Threading();
 		id = -1;
 		sequence = 0;
+		packets = new SortedDictionary<int,Packet>();
 	}
 
 	/**
@@ -116,8 +120,13 @@ public class Client : IClosable {
 		Packet ackResponse = input.Read(PacketType.ACK);
 		if (ackResponse != null) {
 			Endpoint endpoint = ackResponse.Reset(2).GetEndpoint();
+			int seq = ackResponse.Reset(3).GetInteger();
 			ackResponse.Reset();
-			Debug.Log("ACK received for " + endpoint + "...");
+			Debug.Log("ACK received for " + endpoint + "... seq: "+seq);
+			for(int i=0;i<=seq;i++){
+				packets.Remove(i);
+			}
+			Debug.Log("Packets Remaining: "+packets.Count);
 			switch (endpoint) {
 				case Endpoint.JOIN : {
 					HandleJoin(ackResponse);
@@ -129,6 +138,12 @@ public class Client : IClosable {
 		if (snapshotResponse != null) {
 			Debug.Log("SNAPSHOT received...");
 		}
+		foreach(KeyValuePair<int,Packet> p in packets){
+			//Debug.Log("Writing seq: "+p.Key);
+			output.Write(p.Value);
+		}
+
+		//Move(Direction.FORWARD);
 	}
 
 	/**
@@ -159,6 +174,7 @@ public class Client : IClosable {
 		Packet request = GetRequestHeader(PacketType.FLOODING, Endpoint.MOVE, 11)
 			.AddDirection(direction)
 			.Build();
+		packets.Add(sequence-1,request);
 		output.Write(request);
 	}
 
@@ -169,6 +185,7 @@ public class Client : IClosable {
 		Packet request = GetRequestHeader(PacketType.FLOODING, Endpoint.SHOOT, 32)
 			.AddVector(target)
 			.Build();
+		packets.Add(sequence-1,request);
 		output.Write(request);
 	}
 
@@ -180,6 +197,7 @@ public class Client : IClosable {
 		Packet request = GetRequestHeader(PacketType.FLOODING, Endpoint.FRAG, 32)
 			.AddVector(force)
 			.Build();
+		packets.Add(sequence-1,request);
 		output.Write(request);
 	}
 }
