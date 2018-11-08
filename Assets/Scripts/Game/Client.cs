@@ -17,7 +17,7 @@ public class Client : IClosable {
 	protected Snapshot snapshot;
 	protected Stream output;
 	protected Threading threading;
-	protected const int TIMEOUT=100;
+	protected int timeout;
 	protected int id;
 	protected int sequence;
 	protected SortedDictionary<int,Packet> packets;
@@ -49,6 +49,7 @@ public class Client : IClosable {
 		packets = new SortedDictionary<int,Packet>();
 		timedPackets = new SortedDictionary<int,Packet>();
 		timeCounter = 0;
+		timeout = configuration.timeout;
 	}
 
 	/**
@@ -149,7 +150,7 @@ public class Client : IClosable {
 			output.Write(p.Value);
 		}
 		timeCounter++;
-		if (timeCounter % TIMEOUT == 0) {
+		if (timeCounter % timeout == 0) {
 			foreach(KeyValuePair<int,Packet> p in timedPackets){
 			//Debug.Log("Writing seq: "+p.Key);
 				output.Write(p.Value);

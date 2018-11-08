@@ -66,6 +66,9 @@ public class Configuration : MonoBehaviour {
 	// Latencia virtual:
 	public int lag;
 
+	//Timeout reliable:
+	public int timeout;
+
 	// Porcentaje de pérdida de paquetes:
 	public float packetLossRatio;
 
