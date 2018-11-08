@@ -20,6 +20,8 @@ public class Client : IClosable {
 	protected int id;
 	protected int sequence;
 	protected SortedDictionary<int,Packet> packets;
+	protected SortedDictionary<int,Packet> timedPackets;
+	protected int timeCounter;
 
 	public Client(Configuration configuration) {
 		config = configuration;
@@ -44,6 +46,8 @@ public class Client : IClosable {
 		id = -1;
 		sequence = 0;
 		packets = new SortedDictionary<int,Packet>();
+		timedPackets = new SortedDictionary<int,Packet>();
+		timeCounter = 0;
 	}
 
 	/**
@@ -125,6 +129,7 @@ public class Client : IClosable {
 			Debug.Log("ACK received for " + endpoint + "... seq: "+seq);
 			for(int i=0;i<=seq;i++){
 				packets.Remove(i);
+				timedPackets.Remove(i);
 			}
 			Debug.Log("Packets Remaining: "+packets.Count);
 			switch (endpoint) {
@@ -141,6 +146,13 @@ public class Client : IClosable {
 		foreach(KeyValuePair<int,Packet> p in packets){
 			//Debug.Log("Writing seq: "+p.Key);
 			output.Write(p.Value);
+		}
+		timeCounter++;
+		if (timeCounter % 100 == 0) {
+			foreach(KeyValuePair<int,Packet> p in timedPackets){
+			//Debug.Log("Writing seq: "+p.Key);
+				output.Write(p.Value);
+			}
 		}
 
 		//Move(Direction.FORWARD);
@@ -164,6 +176,7 @@ public class Client : IClosable {
 			.AddString(config.clientAddress)
 			.AddInteger(config.clientListeningPort)
 			.Build();
+		timedPackets.Add(sequence-1,request);
 		output.Write(request);
 	}
 
