@@ -10,6 +10,16 @@ public class Player : MonoBehaviour {
 
 	protected Configuration config;
 	protected Snapshot snapshot;
+	protected int id;
+
+	/**
+	* Obtiene la configuración global.
+	*/
+	protected void Awake() {
+		config = GameObject
+			.Find("Configuration")
+			.GetComponent<Configuration>();
+	}
 
 	/**
 	* Aplica movimiento sobre el jugador (en caso de utilizar prediction).
@@ -45,5 +55,19 @@ public class Player : MonoBehaviour {
 	*/
 	protected void LateUpdate() {
 		Camera.main.transform.LookAt(transform);
+	}
+
+	/** **********************************************************************
+	******************************* PUBLIC API ********************************
+	 *********************************************************************** */
+
+	public Player SetID(int id) {
+		this.id = id;
+		return this;
+	}
+
+	public Player SetSnapshot(Snapshot snapshot) {
+		this.snapshot = snapshot;
+		return this;
 	}
 }

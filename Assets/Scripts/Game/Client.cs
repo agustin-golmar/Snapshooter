@@ -14,7 +14,7 @@ public class Client : IClosable {
 	protected Demultiplexer input;
 	protected Link local;
 	protected Link server;
-	protected Snapshot snapshot;
+	protected Snapshot snapshot;	// Borrar!! La maneja World.
 	protected Stream output;
 	protected Threading threading;
 	protected int timeout;
@@ -98,6 +98,12 @@ public class Client : IClosable {
 	*/
 	protected void HandleJoin(Packet response) {
 		id = response.Reset(7).GetInteger();
+		response.Reset();
+		// Debería encontar su ID dentro de la snapshot.
+		GameObject.Find("World")
+			.GetComponent<World>()
+			.CreatePlayer(Vector3.zero, Quaternion.identity)
+			.SetID(id);
 	}
 
 	/** **********************************************************************

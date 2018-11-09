@@ -4,6 +4,7 @@
 
 .idea/
 .vs/
+.vscode/
 Assets/Plugins*
 Builds/
 Library/

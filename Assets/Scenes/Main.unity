@@ -190,8 +190,9 @@ GameObject:
   - component: {fileID: 550730923}
   - component: {fileID: 550730922}
   - component: {fileID: 550730921}
+  - component: {fileID: 550730925}
   m_Layer: 0
-  m_Name: Floor
+  m_Name: World
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -266,6 +267,23 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 3
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &550730925
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 550730920}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dca1af4d328416249acae9ce408c05af, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  playerPrefab: {fileID: 1593502636087912, guid: 9e5db9874d6fc4544b2814292b395e01,
+    type: 2}
+  enemyPrefab: {fileID: 1054251628752520, guid: a4f2b574241394742b7beaf57a42c447,
+    type: 2}
+  grenadePrefab: {fileID: 1479324646123764, guid: 7b777d2add421c845a16bdb78b8d72d5,
+    type: 2}
 --- !u!1 &684639882
 GameObject:
   m_ObjectHideFlags: 0
@@ -293,8 +311,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ed465f449939b6f458fc74b6858fb9e9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  playerPrefab: {fileID: 1593502636087912, guid: 9e5db9874d6fc4544b2814292b395e01,
-    type: 2}
   isServer: 1
   isClient: 1
   serverAddress: 127.0.0.1
@@ -312,6 +328,7 @@ MonoBehaviour:
   slidingWindowSize: 2
   usePrediction: 1
   lag: 0
+  timeout: 3
   packetLossRatio: 0.05
   playerSpeed: 5
 --- !u!4 &684639884

@@ -9,6 +9,7 @@ using UnityEngine;
 	*	-El número de secuencia de la snapshot.
 	*	-El timestamp de dicha snapshot.
 	*	-La cantidad de jugadores en la partida.
+	*	-El ID de cada jugador.
 	*	-La vida de cada jugador (de 0 a 100).
 	*	-Un vector de posición por cada jugador.
 	*	-Un quaternion de rotación por cada jugador.
@@ -26,6 +27,7 @@ public class Snapshot {
 	public int players;
 
 	// Propiedades de los jugadores:
+	public int [] ids;
 	public int [] lifes;
 	public Vector3 [] positions;
 	public Quaternion [] rotations;
@@ -33,6 +35,7 @@ public class Snapshot {
 	// Otros datos...
 
 	public Snapshot(int maxPlayers) {
+		ids = new int [maxPlayers];
 		lifes = new int [maxPlayers];
 		positions = new Vector3 [maxPlayers];
 		rotations = new Quaternion [maxPlayers];
@@ -48,6 +51,7 @@ public class Snapshot {
 		timestamp = packet.GetFloat();
 		players = packet.GetInteger();
 		for (int k = 0; k < players; ++k) {
+			ids[k] = packet.GetInteger();
 			lifes[k] = packet.GetInteger();
 			positions[k] = packet.GetVector();
 			rotations[k] = packet.GetQuaternion();
@@ -66,6 +70,7 @@ public class Snapshot {
 		timestamp = from.timestamp + Δn * (to.timestamp - from.timestamp);
 		players = Math.Min(from.players, to.players);
 		for (int k = 0; k < players; ++k) {
+			ids[k] = from.ids[k];
 			lifes[k] = from.lifes[k];
 			positions[k] = Vector3.Lerp(from.positions[k], to.positions[k], Δn);
 			rotations[k] = Quaternion.Slerp(from.rotations[k], to.rotations[k], Δn);
@@ -77,13 +82,14 @@ public class Snapshot {
 	* Devuelve la representación en forma de paquete de bytes de esta snapshot.
 	*/
 	public Packet ToPacket() {
-		Packet.Builder builder = new Packet.Builder(13 + 32 * players)
+		Packet.Builder builder = new Packet.Builder(13 + 36 * players)
 			.AddPacketType(PacketType.SNAPSHOT)
 			.AddInteger(sequence)
 			.AddFloat(timestamp)
 			.AddInteger(players);
 		for (int k = 0; k < players; ++k) {
-			builder.AddInteger(lifes[k])
+			builder.AddInteger(ids[k])
+				.AddInteger(lifes[k])
 				.AddVector(positions[k])
 				.AddQuaternion(rotations[k]);
 		}
@@ -106,18 +112,23 @@ public class Snapshot {
 		return this;
 	}
 
-	public Snapshot Life(int id, int life) {
-		lifes[id] = life;
+	public Snapshot ID(int index, int id) {
+		lifes[index] = id;
 		return this;
 	}
 
-	public Snapshot Position(int id, Vector3 position) {
-		positions[id] = position;
+	public Snapshot Life(int index, int life) {
+		lifes[index] = life;
 		return this;
 	}
 
-	public Snapshot Rotation(int id, Quaternion rotation) {
-		rotations[id] = rotation;
+	public Snapshot Position(int index, Vector3 position) {
+		positions[index] = position;
+		return this;
+	}
+
+	public Snapshot Rotation(int index, Quaternion rotation) {
+		rotations[index] = rotation;
 		return this;
 	}
 }

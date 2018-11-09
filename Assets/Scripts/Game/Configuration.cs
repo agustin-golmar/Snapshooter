@@ -18,9 +18,6 @@ public class Configuration : MonoBehaviour {
 	// Indica si se debe abortar la ejecución:
 	protected bool onExit;
 
-	// Prefab de un jugador:
-	public GameObject playerPrefab;
-
 	// Indica si se trata de un servidor o no:
 	public bool isServer;
 
@@ -48,7 +45,7 @@ public class Configuration : MonoBehaviour {
 	// Cantidad máxima de paquetes en un stream:
 	public int maxPacketsInQueue;
 
-	// Timeouts para envío y recepción de paquetes:
+	// Timeouts para envío y recepción de paquetes (en [ms]):
 	public int serverReceiveTimeout;
 	public int serverSendTimeout;
 	public int clientReceiveTimeout;
@@ -63,13 +60,13 @@ public class Configuration : MonoBehaviour {
 	// Habilitar predicción:
 	public bool usePrediction;
 
-	// Latencia virtual:
+	// Latencia virtual (en [ms]):
 	public int lag;
 
-	//Timeout reliable:
+	// Timeout para eventos reliable (en [s]):
 	public int timeout;
 
-	// Porcentaje de pérdida de paquetes:
+	// Porcentaje de pérdida de paquetes (entre 0 y 1):
 	public float packetLossRatio;
 
 	// Velocidad de los jugadores en [m/s]:
@@ -136,14 +133,5 @@ public class Configuration : MonoBehaviour {
 	*/
 	public bool OnExit() {
 		return onExit;
-	}
-
-	/**
-	* Instancia el jugador principal, en una posición y con cierta orientación
-	* o rotación específica.
-	*/
-	public Player CreatePlayer(Vector3 position, Quaternion rotation) {
-		return Instantiate(playerPrefab, position, rotation)
-			.GetComponent<Player>();
 	}
 }
