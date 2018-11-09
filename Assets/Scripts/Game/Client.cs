@@ -1,5 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 
 	/**
@@ -20,9 +19,9 @@ public class Client : IClosable {
 	protected int timeout;
 	protected int id;
 	protected int sequence;
-	protected SortedDictionary<int,Packet> packets;
-	protected SortedDictionary<int,Packet> timedPackets;
-	protected int timeCounter;
+	protected SortedDictionary<int, Packet> packets;
+	protected SortedDictionary<int, Packet> timedPackets;
+	protected float lastTime;
 
 	public Client(Configuration configuration) {
 		config = configuration;
@@ -46,9 +45,9 @@ public class Client : IClosable {
 		threading = new Threading();
 		id = -1;
 		sequence = 0;
-		packets = new SortedDictionary<int,Packet>();
-		timedPackets = new SortedDictionary<int,Packet>();
-		timeCounter = 0;
+		packets = new SortedDictionary<int, Packet>();
+		timedPackets = new SortedDictionary<int, Packet>();
+		lastTime = 0;
 		timeout = configuration.timeout;
 	}
 
@@ -97,11 +96,13 @@ public class Client : IClosable {
 	* respuesta afirmativa, con un ID válido (mayor o igual a cero).
 	*/
 	protected void HandleJoin(Packet response) {
+		Debug.Log("Creating player...");
 		id = response.Reset(7).GetInteger();
 		response.Reset();
 		// Debería encontar su ID dentro de la snapshot.
 		GameObject.Find("World")
 			.GetComponent<World>()
+			.LoadSnapshot(snapshot)
 			.CreatePlayer(Vector3.zero, Quaternion.identity)
 			.SetID(id);
 	}
@@ -129,17 +130,18 @@ public class Client : IClosable {
 	* exclusivamente.
 	*/
 	public void FrameHandler() {
+		// Procesar ACKs:
 		Packet ackResponse = input.Read(PacketType.ACK);
 		if (ackResponse != null) {
 			Endpoint endpoint = ackResponse.Reset(2).GetEndpoint();
-			int seq = ackResponse.Reset(3).GetInteger();
+			int sequence = ackResponse.GetInteger();
 			ackResponse.Reset();
-			Debug.Log("ACK received for " + endpoint + "... seq: "+seq);
-			for(int i=0;i<=seq;i++){
+			Debug.Log("ACK received for " + endpoint + ". Sequence: " + sequence);
+			for (int i = 0; i <= sequence; ++i) {
 				packets.Remove(i);
 				timedPackets.Remove(i);
 			}
-			Debug.Log("Packets Remaining: "+packets.Count);
+			Debug.Log("Packets Remaining: " + packets.Count);
 			switch (endpoint) {
 				case Endpoint.JOIN : {
 					HandleJoin(ackResponse);
@@ -147,23 +149,22 @@ public class Client : IClosable {
 				}
 			}
 		}
+		// Procesar SNAPSHOTs:
 		Packet snapshotResponse = input.Read(PacketType.SNAPSHOT);
 		if (snapshotResponse != null) {
 			Debug.Log("SNAPSHOT received...");
+			// Debería cargarlo en el mundo y esto automáticamente se ve reflejado en las entidades.
 		}
-		foreach(KeyValuePair<int,Packet> p in packets){
-			//Debug.Log("Writing seq: "+p.Key);
+		foreach (KeyValuePair<int, Packet> p in packets) {
 			output.Write(p.Value);
 		}
-		timeCounter++;
-		if (timeCounter % timeout == 0) {
-			foreach(KeyValuePair<int,Packet> p in timedPackets){
-			//Debug.Log("Writing seq: "+p.Key);
+		float curTime = Time.unscaledTime;
+		if (curTime >= lastTime + timeout) {
+			lastTime = curTime;
+			foreach(KeyValuePair<int, Packet> p in timedPackets) {
 				output.Write(p.Value);
 			}
 		}
-
-		//Move(Direction.FORWARD);
 	}
 
 	/**
@@ -184,7 +185,7 @@ public class Client : IClosable {
 			.AddString(config.clientAddress)
 			.AddInteger(config.clientListeningPort)
 			.Build();
-		timedPackets.Add(sequence-1,request);
+		timedPackets.Add(sequence - 1, request);
 		output.Write(request);
 	}
 
@@ -195,7 +196,7 @@ public class Client : IClosable {
 		Packet request = GetRequestHeader(PacketType.FLOODING, Endpoint.MOVE, 11)
 			.AddDirection(direction)
 			.Build();
-		packets.Add(sequence-1,request);
+		packets.Add(sequence - 1, request);
 		output.Write(request);
 	}
 
@@ -206,7 +207,7 @@ public class Client : IClosable {
 		Packet request = GetRequestHeader(PacketType.FLOODING, Endpoint.SHOOT, 32)
 			.AddVector(target)
 			.Build();
-		packets.Add(sequence-1,request);
+		packets.Add(sequence - 1, request);
 		output.Write(request);
 	}
 
@@ -218,7 +219,7 @@ public class Client : IClosable {
 		Packet request = GetRequestHeader(PacketType.FLOODING, Endpoint.FRAG, 32)
 			.AddVector(force)
 			.Build();
-		packets.Add(sequence-1,request);
+		packets.Add(sequence - 1, request);
 		output.Write(request);
 	}
 }

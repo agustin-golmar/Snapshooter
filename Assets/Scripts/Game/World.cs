@@ -66,6 +66,15 @@ public class World : MonoBehaviour {
 	 *********************************************************************** */
 
 	/**
+	* Conecta la snapshot global, para que sea accesible al resto de los
+	* objetos.
+	*/
+	public World LoadSnapshot(Snapshot snapshot) {
+		this.snapshot = snapshot;
+		return this;
+	}
+
+	/**
 	* Instancia un nuevo GameObject, en una posición y con cierta orientación
 	* o rotación específica.
 	*/

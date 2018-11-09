@@ -22,6 +22,7 @@ public class Server : IClosable, IAPI {
 	protected Threading threading;
 	protected float lastSnapshot;
 	protected float Δs;
+	protected SortedDictionary<int, Packet>[] acks;
 
 	public Server(Configuration configuration) {
 		config = configuration;
@@ -39,6 +40,10 @@ public class Server : IClosable, IAPI {
 		threading = new Threading();
 		lastSnapshot = 0.0f;
 		Δs = 1.0f / config.snapshotsPerSecond;
+		acks = new SortedDictionary<int, Packet>[config.maxPlayers];
+		for (int i = 0; i < config.maxPlayers; ++i){
+			acks[i] = new SortedDictionary<int, Packet>();
+		}
 	}
 
 	/**
@@ -47,25 +52,38 @@ public class Server : IClosable, IAPI {
 	*/
 	protected Packet Dispatch(Packet request) {
 		Endpoint endpoint = request.Reset(1).GetEndpoint();
+		int sequence = request.GetInteger();
+		int id = request.GetInteger();
 		request.Reset();
+		Debug.Log("Dispatching request with ID: " + id);
+		Packet response;
+		if (0 <= id && acks[id].TryGetValue(sequence, out response)) {
+			return response;
+		}
 		switch (endpoint) {
 			case Endpoint.JOIN : {
-				return Join(request);
+				response = Join(request);
+				break;
 			}
 			case Endpoint.MOVE : {
-				return Move(request);
+				response = Move(request);
+				break;
 			}
 			case Endpoint.SHOOT : {
-				return Shoot(request);
+				response = Shoot(request);
+				break;
 			}
 			case Endpoint.FRAG : {
-				return Frag(request);
+				response = Frag(request);
+				break;
 			}
 			default : {
 				Debug.Log("Unknown Endpoint: " + endpoint);
 				return GetResponseHeader(request, 7).Build();
 			}
 		}
+		acks[id].Add(sequence, response);
+		return response;
 	}
 
 	/**
@@ -82,7 +100,7 @@ public class Server : IClosable, IAPI {
 			PacketType type = request.GetPacketType();
 			int id = request.Reset(6).GetInteger();
 			request.Reset();
-			// Proceso el mismo, y genero el response:
+			// Procesar request y generar response:
 			switch (type) {
 				case PacketType.EVENT :
 				case PacketType.FLOODING : {
@@ -198,7 +216,9 @@ public class Server : IClosable, IAPI {
 			// Extraer <ip:port> del cliente:
 			string ip = request.Reset(10).GetString();
 			int port = request.GetInteger();
-			int id = links.Count;
+			int index = links.Count;
+			// Por ahora, el ID es equivalente al índice:
+			int id = index;
 			// Crear enlace y stream de paquetes:
 			links.Add(new Link.Builder()
 				.Bind(false)
@@ -210,13 +230,15 @@ public class Server : IClosable, IAPI {
 			outputs.Add(new Stream(config.maxPacketsInQueue));
 			// Actualizar snapshot global:
 			++snapshot.players;
-			snapshot.Life(id, 100)
-				.Position(id, GetRespawn(id))
-				.Rotation(id, Quaternion.identity);
+			snapshot.ID(index, id)
+				.Life(index, 100)
+				.Position(index, GetRespawn(id))
+				.Rotation(index, Quaternion.identity);
 			// Agregar el nuevo ID al response y enviar:
 			Packet response = GetResponseHeader(request.Reset(), 11)
 					.AddInteger(id)
 					.Build();
+			Debug.Log("Server successfully join a new client: " + id);
 			local.Send(new IPEndPoint(IPAddress.Parse(ip), port), response);
 		}
 		return GetResponseHeader(request, 7).Build();
