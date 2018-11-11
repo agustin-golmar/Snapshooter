@@ -29,32 +29,44 @@ public class Snapshot {
 	// Propiedades de los jugadores:
 	public int [] ids;
 	public int [] lifes;
-	public Vector3 [] positions;
-	public Quaternion [] rotations;
+	public Transform [] transforms;
 
 	// Otros datos...
 
-	public Snapshot(int maxPlayers) {
+	/**
+	* Asigna memoria suficiente para la cantidad de jugadores especificados.
+	*/
+	protected Snapshot Allocate(int maxPlayers) {
 		ids = new int [maxPlayers];
 		lifes = new int [maxPlayers];
-		positions = new Vector3 [maxPlayers];
-		rotations = new Quaternion [maxPlayers];
+		transforms = new Transform [maxPlayers];
+		for (int k = 0; k < maxPlayers; ++k) {
+			transforms[k] = new GameObject().transform;
+			transforms[k].position = Vector3.zero;
+			transforms[k].rotation = Quaternion.identity;
+		}
+		return this;
+	}
+
+	public Snapshot(int maxPlayers) {
+		Allocate(maxPlayers);
 		// Otros datos...
 	}
 
 	/**
 	* Crea una snapshot desde un paquete de bytes.
 	*/
-	public Snapshot(Packet packet) {
+	public Snapshot(Packet packet) {				// Evitar que se creen transformadas cada vez!!!
 		packet.Reset(1);
 		sequence = packet.GetInteger();
 		timestamp = packet.GetFloat();
 		players = packet.GetInteger();
+		Allocate(players);
 		for (int k = 0; k < players; ++k) {
 			ids[k] = packet.GetInteger();
 			lifes[k] = packet.GetInteger();
-			positions[k] = packet.GetVector();
-			rotations[k] = packet.GetQuaternion();
+			transforms[k].position = packet.GetVector();
+			transforms[k].rotation = packet.GetQuaternion();
 		}
 		// Otros datos...
 		packet.Reset();
@@ -63,19 +75,23 @@ public class Snapshot {
 	/**
 	* Crea una snapshot interpolada, utilizando dos snapshots como extremo. Ya
 	* que pueden existir diferente cantidad de jugadores entre una snapshot y
-	* otra, se toma el mínimo entre ambas snapshots.
+	* otra, se toma el mínimo entre ambas snapshots. En el caso de que ciertos
+	* parámetros no sean interpolables (como la vida), se toma el parámetro
+	* antiguo (de from), ya que el nuevo parámetro todavía no ocurrió (es
+	* decir, pertenece al futuro del jugador).
 	*/
-	public Snapshot(Snapshot from, Snapshot to, float Δn) {
+	public Snapshot Interpolate(Snapshot from, Snapshot to, float Δn) {
 		sequence = from.sequence;
 		timestamp = from.timestamp + Δn * (to.timestamp - from.timestamp);
 		players = Math.Min(from.players, to.players);
 		for (int k = 0; k < players; ++k) {
 			ids[k] = from.ids[k];
 			lifes[k] = from.lifes[k];
-			positions[k] = Vector3.Lerp(from.positions[k], to.positions[k], Δn);
-			rotations[k] = Quaternion.Slerp(from.rotations[k], to.rotations[k], Δn);
+			transforms[k].position = Vector3.Lerp(from.transforms[k].position, to.transforms[k].position, Δn);
+			transforms[k].rotation = Quaternion.Slerp(from.transforms[k].rotation, to.transforms[k].rotation, Δn);
 		}
 		// Otros datos...
+		return this;
 	}
 
 	/**
@@ -90,12 +106,16 @@ public class Snapshot {
 		for (int k = 0; k < players; ++k) {
 			builder.AddInteger(ids[k])
 				.AddInteger(lifes[k])
-				.AddVector(positions[k])
-				.AddQuaternion(rotations[k]);
+				.AddVector(transforms[k].position)
+				.AddQuaternion(transforms[k].rotation);
 		}
 		// Otros datos...
 		return builder.Build();
 	}
+
+	/** ***********************************************************************
+	* Setters encadenables.
+	*/
 
 	public Snapshot Sequence(int sequence) {
 		this.sequence = sequence;
@@ -123,12 +143,12 @@ public class Snapshot {
 	}
 
 	public Snapshot Position(int index, Vector3 position) {
-		positions[index] = position;
+		transforms[index].position = position;
 		return this;
 	}
 
 	public Snapshot Rotation(int index, Quaternion rotation) {
-		rotations[index] = rotation;
+		transforms[index].rotation = rotation;
 		return this;
 	}
 }

@@ -1,5 +1,9 @@
 ﻿using UnityEngine;
 
+	/**
+	* El jugador local.
+	*/
+
 public class Player : MonoBehaviour {
 
 	// Comandos de movimiento:
@@ -10,6 +14,7 @@ public class Player : MonoBehaviour {
 
 	protected Configuration config;
 	protected Snapshot snapshot;
+	protected Client client;
 	protected int id;
 
 	/**
@@ -22,9 +27,27 @@ public class Player : MonoBehaviour {
 	}
 
 	/**
-	* Aplica movimiento sobre el jugador (en caso de utilizar prediction).
+	* Envía un comando de movimiento al servidor.
 	*/
 	protected void Move() {
+		if (Input.GetKey(KEY_W)) {
+			client.Move(Direction.FORWARD);
+		}
+		if (Input.GetKey(KEY_A)) {
+			client.Move(Direction.STRAFING_LEFT);
+		}
+		if (Input.GetKey(KEY_S)) {
+			client.Move(Direction.BACKWARD);
+		}
+		if (Input.GetKey(KEY_D)) {
+			client.Move(Direction.STRAFING_RIGHT);
+		}
+	}
+
+	/**
+	* Aplica movimiento sobre el jugador (en caso de utilizar prediction).
+	*/
+	protected void PredictMove() {
 		float delta = config.playerSpeed * Time.deltaTime;
 		if (Input.GetKey(KEY_W)) {
 			transform.Translate(0, 0, delta);
@@ -41,12 +64,28 @@ public class Player : MonoBehaviour {
 	}
 
 	/**
-	* Falta validar que la predicción sea consistente con el estado de la
-	* snapshot.
+	* Actualiza el estado del jugador desde la snapshot. En caso de utilizar
+	* predicción, se debe comparar el estado contra la predicción. Si hay una
+	* diferencia substancial, se aplica una corrección.
 	*/
 	protected void Update() {
+		Move();
 		if (config.usePrediction) {
-			Move();
+			PredictMove();
+			// Contra qué frame debería comparar?
+			if (config.ΔPosition < Vector3.Distance(transform.position, snapshot.transforms[id].position)) {
+				Debug.Log("Corrigiendo posición (" + Vector3.Distance(transform.position, snapshot.transforms[id].position) + ").");
+				transform.position = snapshot.transforms[id].position;
+			}
+			if (config.ΔRotation < Quaternion.Angle(transform.rotation, snapshot.transforms[id].rotation)) {
+				Debug.Log("Corrigiendo rotación (" + Quaternion.Angle(transform.rotation, snapshot.transforms[id].rotation) + ").");
+				transform.rotation = snapshot.transforms[id].rotation;
+			}
+		}
+		else {
+			// Actualizar vida en HUD.
+			// snapshot.lifes[id];
+			transform.SetPositionAndRotation(snapshot.transforms[id].position, snapshot.transforms[id].rotation);
 		}
 	}
 
@@ -60,6 +99,11 @@ public class Player : MonoBehaviour {
 	/** **********************************************************************
 	******************************* PUBLIC API ********************************
 	 *********************************************************************** */
+
+	public Player SetClient(Client client) {
+		this.client = client;
+		return this;
+	}
 
 	public Player SetID(int id) {
 		this.id = id;

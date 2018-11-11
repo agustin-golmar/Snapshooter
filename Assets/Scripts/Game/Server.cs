@@ -22,6 +22,7 @@ public class Server : IClosable, IAPI {
 	protected Threading threading;
 	protected float lastSnapshot;
 	protected float Δs;
+	protected Dictionary<string, Packet> joins;
 	protected SortedDictionary<int, Packet>[] acks;
 
 	public Server(Configuration configuration) {
@@ -36,12 +37,13 @@ public class Server : IClosable, IAPI {
 			.Build();
 		links = new List<Link>();
 		outputs = new List<Stream>();
-		snapshot = new Snapshot(config.maxPlayers);
+		snapshot = config.GetServerSnapshot();
 		threading = new Threading();
 		lastSnapshot = 0.0f;
 		Δs = 1.0f / config.snapshotsPerSecond;
+		joins = new Dictionary<string, Packet>();
 		acks = new SortedDictionary<int, Packet>[config.maxPlayers];
-		for (int i = 0; i < config.maxPlayers; ++i){
+		for (int i = 0; i < config.maxPlayers; ++i) {
 			acks[i] = new SortedDictionary<int, Packet>();
 		}
 	}
@@ -55,8 +57,8 @@ public class Server : IClosable, IAPI {
 		int sequence = request.GetInteger();
 		int id = request.GetInteger();
 		request.Reset();
-		Debug.Log("Dispatching request with ID: " + id);
 		Packet response;
+		Debug.Log("Dispatching request with ID: " + id);
 		if (0 <= id && acks[id].TryGetValue(sequence, out response)) {
 			return response;
 		}
@@ -82,7 +84,9 @@ public class Server : IClosable, IAPI {
 				return GetResponseHeader(request, 7).Build();
 			}
 		}
-		acks[id].Add(sequence, response);
+		if (0 <= id) {
+			acks[id].Add(sequence, response);
+		}
 		return response;
 	}
 
@@ -93,29 +97,10 @@ public class Server : IClosable, IAPI {
 	protected void RequestHandler() {
 		IPEndPoint anyLink = new IPEndPoint(IPAddress.Any, 0);
 		while (!config.OnExit()) {
-			// Obtengo el paquete request:
 			byte [] payload = local.Receive(anyLink);
-			if (payload == null) continue;
-			Packet request = new Packet(payload);
-			PacketType type = request.GetPacketType();
-			int id = request.Reset(6).GetInteger();
-			request.Reset();
-			// Procesar request y generar response:
-			switch (type) {
-				case PacketType.EVENT :
-				case PacketType.FLOODING : {
-					Packet response = Dispatch(request);
-					if (0 <= id) {
-						local.Send(links[id], response);
-					}
-					break;
-				}
-				default : {
-					// No debería pasar nunca:
-					Debug.Log("Invalid PacketType: " + type);
-					input.Write(request);
-					break;
-				}
+			if (payload != null) {
+				Packet packet = new Packet(payload);
+				input.Write(packet);
 			}
 		}
 	}
@@ -159,6 +144,23 @@ public class Server : IClosable, IAPI {
 		return new Vector3(4 * id - 2 * config.maxPlayers, 1.0f, 0);
 	}
 
+	/**
+	* Procesa todos los paquetes de cierto tipo en el thread principal, lo cual
+	* permite que cada endpoint adquiera acceso al API de Unity.
+	*/
+	protected void HandleAllRequest(PacketType type) {
+		Queue<Packet> packets = input.ReadAll(type);
+		foreach (Packet request in packets) {
+			int id = request.Reset(6).GetInteger();
+			Debug.Log("Server FrameHandler dispatch " + type + " (ID = " + id + ")");
+			Packet response = Dispatch(request.Reset());
+			if (0 <= id) {
+				outputs[id].Write(response);
+				//local.Send(links[id], response);
+			}
+		}
+	}
+
 	/** **********************************************************************
 	******************************* PUBLIC API ********************************
 	 *********************************************************************** */
@@ -179,12 +181,17 @@ public class Server : IClosable, IAPI {
 	* serán enviados por ResponseHandler.
 	*/
 	public void FrameHandler() {
+		// Procesar paquetes reliable:
+		HandleAllRequest(PacketType.EVENT);
+		HandleAllRequest(PacketType.FLOODING);
+		// Procesar snapshot:
 		int currentSnapshot = Mathf.FloorToInt(Time.unscaledTime/Δs);
 		if (lastSnapshot < currentSnapshot) {
 			lastSnapshot = currentSnapshot;
-			Debug.Log("Snapshooting at " + Time.unscaledTime + " sec. (snapshot " + currentSnapshot + ").");
 			snapshot.sequence = currentSnapshot;
 			snapshot.timestamp = Time.unscaledTime;
+			if (snapshot.players == 0) return;
+			Debug.Log("Snapshooting at " + Time.unscaledTime + " sec. (snapshot " + currentSnapshot + ").");
 			Packet packet = snapshot.ToPacket();
 			foreach (Stream output in outputs) {
 				output.Write(packet);
@@ -212,10 +219,18 @@ public class Server : IClosable, IAPI {
 	* el caso en que el ACK se pierde, pero las estructuras ya fueron creadas.
 	*/
 	public Packet Join(Packet request) {
-		if (links.Count < config.maxPlayers) {
-			// Extraer <ip:port> del cliente:
-			string ip = request.Reset(10).GetString();
-			int port = request.GetInteger();
+		// Extraer <ip:port> del cliente:
+		string ip = request.Reset(10).GetString();
+		int port = request.GetInteger();
+		request.Reset();
+		IPEndPoint client = new IPEndPoint(IPAddress.Parse(ip), port);
+		string key = ip + ":" + port;
+		if (joins.ContainsKey(key)) {
+			// El cliente ya se había conectado, pero no recibió el ACK:
+			Debug.Log("Server already joined the client from host: " + key);
+			local.Send(client, joins[key]);
+		}
+		else if (links.Count < config.maxPlayers) {
 			int index = links.Count;
 			// Por ahora, el ID es equivalente al índice:
 			int id = index;
@@ -235,11 +250,13 @@ public class Server : IClosable, IAPI {
 				.Position(index, GetRespawn(id))
 				.Rotation(index, Quaternion.identity);
 			// Agregar el nuevo ID al response y enviar:
-			Packet response = GetResponseHeader(request.Reset(), 11)
+			Packet response = GetResponseHeader(request, 11)
 					.AddInteger(id)
 					.Build();
+			// Reliable join:
+			joins.Add(key, response);
 			Debug.Log("Server successfully join a new client: " + id);
-			local.Send(new IPEndPoint(IPAddress.Parse(ip), port), response);
+			local.Send(client, response);
 		}
 		return GetResponseHeader(request, 7).Build();
 	}
@@ -248,6 +265,31 @@ public class Server : IClosable, IAPI {
 	* Mueve un jugador en alguna dirección.
 	*/
 	public Packet Move(Packet request) {
+		int id = request.Reset(6).GetInteger();
+		Direction direction = request.GetDirection();
+		request.Reset();
+		Debug.Log("Server moving player ID = " + id + " to " + direction + ".");
+		// De dónde proviene Time.deltaTime?
+		float delta = config.playerSpeed * Time.deltaTime;
+		Transform transform = snapshot.transforms[id];
+		switch (direction) {
+			case Direction.FORWARD : {
+				transform.Translate(0, 0, delta);
+				break;
+			}
+			case Direction.STRAFING_LEFT : {
+				transform.Rotate(Vector3.down, 30.0f * delta);
+				break;
+			}
+			case Direction.BACKWARD : {
+				transform.Translate(0, 0, -delta);
+				break;
+			}
+			case Direction.STRAFING_RIGHT : {
+				transform.Rotate(Vector3.up, 30.0f * delta);
+				break;
+			}
+		}
 		return GetResponseHeader(request, 7).Build();
 	}
 

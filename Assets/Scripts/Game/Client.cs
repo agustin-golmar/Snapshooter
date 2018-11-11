@@ -13,7 +13,8 @@ public class Client : IClosable {
 	protected Demultiplexer input;
 	protected Link local;
 	protected Link server;
-	protected Snapshot snapshot;	// Borrar!! La maneja World.
+	protected Snapshot snapshot;
+	protected SnapshotInterpolator interpolator;
 	protected Stream output;
 	protected Threading threading;
 	protected int timeout;
@@ -41,6 +42,11 @@ public class Client : IClosable {
 			.SendTimeout(config.serverSendTimeout)
 			.Build();
 		snapshot = new Snapshot(config.maxPlayers);
+		interpolator = new SnapshotInterpolator.Builder()
+			.Snapshot(snapshot)
+			.Window(config.slidingWindowSize)
+			.SPS(config.snapshotsPerSecond)
+			.Build();
 		output = new Stream(config.maxPacketsInQueue);
 		threading = new Threading();
 		id = -1;
@@ -48,7 +54,7 @@ public class Client : IClosable {
 		packets = new SortedDictionary<int, Packet>();
 		timedPackets = new SortedDictionary<int, Packet>();
 		lastTime = 0;
-		timeout = configuration.timeout;
+		timeout = config.timeout;
 	}
 
 	/**
@@ -104,7 +110,9 @@ public class Client : IClosable {
 			.GetComponent<World>()
 			.LoadSnapshot(snapshot)
 			.CreatePlayer(Vector3.zero, Quaternion.identity)
-			.SetID(id);
+			.SetClient(this)
+			.SetID(id)
+			.SetSnapshot(snapshot);
 	}
 
 	/** **********************************************************************
@@ -138,6 +146,9 @@ public class Client : IClosable {
 			ackResponse.Reset();
 			Debug.Log("ACK received for " + endpoint + ". Sequence: " + sequence);
 			for (int i = 0; i <= sequence; ++i) {
+				// !!!
+				// Lento: si 'sequence' es 10000 corre 10000 veces en cada frame.
+				// !!!
 				packets.Remove(i);
 				timedPackets.Remove(i);
 			}
@@ -150,20 +161,15 @@ public class Client : IClosable {
 			}
 		}
 		// Procesar SNAPSHOTs:
-		Packet snapshotResponse = input.Read(PacketType.SNAPSHOT);
-		if (snapshotResponse != null) {
-			Debug.Log("SNAPSHOT received...");
-			// Debería cargarlo en el mundo y esto automáticamente se ve reflejado en las entidades.
-		}
-		foreach (KeyValuePair<int, Packet> p in packets) {
-			output.Write(p.Value);
-		}
+		Queue<Packet> snapshots = input.ReadAll(PacketType.SNAPSHOT);
+		interpolator.AddPackets(snapshots).Update();
+		// Procesar 'reliability':
+		output.WriteAll(packets.Values);
 		float curTime = Time.unscaledTime;
 		if (curTime >= lastTime + timeout) {
+			Debug.Log("Client reliability TIMEOUT.");
 			lastTime = curTime;
-			foreach(KeyValuePair<int, Packet> p in timedPackets) {
-				output.Write(p.Value);
-			}
+			output.WriteAll(timedPackets.Values);
 		}
 	}
 

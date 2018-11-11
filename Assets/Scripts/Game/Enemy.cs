@@ -15,6 +15,7 @@ public class Enemy : MonoBehaviour {
 	}
 
 	protected void Update() {
+		transform.SetPositionAndRotation(snapshot.transforms[id].position, snapshot.transforms[id].rotation);
 	}
 
 	/** **********************************************************************

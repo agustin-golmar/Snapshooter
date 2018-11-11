@@ -47,9 +47,9 @@ public class World : MonoBehaviour {
 				Debug.Log("Found new player (old was " + players + "): " + snapshot.players);
 				// Se creó un jugador. Siempre es el último en la lista.
 				++players;
-				Enemy enemy = CreateEnemy(snapshot.positions[players], snapshot.rotations[players]);
-				enemy.SetID(snapshot.ids[players]);
-				enemy.SetSnapshot(snapshot);
+				CreateEnemy(snapshot.transforms[players].position, snapshot.transforms[players].rotation)
+					.SetID(snapshot.ids[players])
+					.SetSnapshot(snapshot);
 			}
 			else if (snapshot.players < players) {
 				// Se eliminó un jugador.

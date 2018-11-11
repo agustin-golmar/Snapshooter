@@ -18,6 +18,9 @@ public class Configuration : MonoBehaviour {
 	// Indica si se debe abortar la ejecución:
 	protected bool onExit;
 
+	// Snapshot global (server-side):
+	protected Snapshot serverSnapshot;
+
 	// Indica si se trata de un servidor o no:
 	public bool isServer;
 
@@ -60,6 +63,10 @@ public class Configuration : MonoBehaviour {
 	// Habilitar predicción:
 	public bool usePrediction;
 
+	// Umbrales de error para predicción:
+	public float ΔPosition;
+	public float ΔRotation;
+
 	// Latencia virtual (en [ms]):
 	public int lag;
 
@@ -80,6 +87,7 @@ public class Configuration : MonoBehaviour {
 		Debug.Log("Loading scene...");
 		onExit = false;
 		resources = new List<IClosable>();
+		serverSnapshot = new Snapshot(maxPlayers);
 		if (isServer) {
 			Debug.Log("Loading server instance...");
 			server = new Server(this);
@@ -133,5 +141,13 @@ public class Configuration : MonoBehaviour {
 	*/
 	public bool OnExit() {
 		return onExit;
+	}
+
+	/**
+	* Devuelve la única snapshot global. Solo el servidor debería modificar su
+	* contenido. El resto de accesos es de sólo lectura.
+	*/
+	public Snapshot GetServerSnapshot() {
+		return serverSnapshot;
 	}
 }

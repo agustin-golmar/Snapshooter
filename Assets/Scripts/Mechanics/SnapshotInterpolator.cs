@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
 
-	/*
+	/**
 	* Interpolador de snapshots. Solo el cliente se encarga de utilizar este
 	* sistema ya que el servidor posee información completa.
 	*/
@@ -11,6 +11,7 @@ public class SnapshotInterpolator {
 	protected readonly Queue<Snapshot> snapshots;
 	protected readonly int window;
 	protected readonly float Δs;
+	protected readonly Snapshot now;
 
 	protected float baseTime;
 	protected float timestamp;
@@ -18,93 +19,49 @@ public class SnapshotInterpolator {
 	protected Snapshot from;
 	protected Snapshot to;
 
-	public SnapshotInterpolator(int windowSize, int sps) {
-		window = windowSize;
+	public SnapshotInterpolator(Builder builder) {
 		snapshots = new Queue<Snapshot>();
-		lastSequence = -1;
-		Δs = 1.0f/sps;
-		timestamp = -1.0f;
+		window = builder.window;
+		Δs = 1.0f/builder.sps;
 		baseTime = -1.0f;
+		timestamp = -1.0f;
+		lastSequence = -1;
 		from = null;
+		now = builder.snapshot;
 		to = null;
 	}
 
-	public SnapshotInterpolator AddPacket(Packet packet) {
-		Snapshot snapshot = new Snapshot(packet);
-		if (lastSequence < snapshot.sequence) {
-			if (lastSequence < 0) {
-				baseTime = Time.unscaledTime - GetTimeForSequence(snapshot.sequence);
-				Debug.Log("\tBase time: " + baseTime);
-			}
-			lastSequence = snapshot.sequence;
-			snapshots.Enqueue(snapshot);
-			Debug.Log("\tSecuencia agregada: " + snapshot.sequence);
-		}
-		else {
-			Debug.Log("\tSe eliminó un paquete porque su secuencia es antigua (" + snapshot.sequence + ", last = " + lastSequence + ").");
-		}
-		return this;
-	}
-
-	public SnapshotInterpolator AddPackets(Queue<Packet> packets) {
-		if (lastSequence < 0) {
-			while (1 < packets.Count) {
-				packets.Dequeue();
-			}
-		}
-		foreach (Packet packet in packets) {
-			AddPacket(packet);
-		}
-		return this;
-	}
-
-	public Snapshot GetSnapshot() {
-		// Agregar verificación de secuencias corridas y validar ventana.
-		SlideWindow().TrySetTimestamp();
-		if (CanInterpolate()) {
-			float Δt = GetInterpolationDelta();
-			float Δn = Δt/Δs;
-			Debug.Log("\tDelta Δt = " + Δt);
-			Debug.Log("\tClamp Δn = " + 100*Δn + " %");
-			return new Snapshot(from, to, Δn);
-		}
-		else return null;
-	}
-
-	/// <summary>
-	/// Indica si se puede aplicar o no una interpolación. Para que se
-	/// aplique dicho proceso, deben existir dos snapshots, una por defecto
-	/// y otra por exceso, en relación al tiempo de interpolación.
-	/// </summary>
-	/// <returns></returns>
+	/**
+	* Indica si se puede aplicar o no una interpolación. Para que se aplique
+	* dicho proceso, deben existir dos snapshots, una por defecto y otra por
+	* exceso, en relación al tiempo de interpolación.
+	*/
 	protected bool CanInterpolate() {
 		return from != null && to != null;
 	}
 
-	/// <summary>
-	/// Devuelve el tiempo dentro del intervalo de interpolación.
-	/// </summary>
+	/**
+	* Devuelve el tiempo dentro del intervalo de interpolación.
+	*/
 	protected float GetInterpolationDelta() {
 		return GetInterpolationTime() - timestamp;
 	}
 
-	/// <summary>
-	/// Devuelve el tiempo actual de interpolación, lo que implica tener en
-	/// cuenta un tiempo de base, y un retraso provocado por la ventana de
-	/// interpolación.
-	/// </summary>
-	/// <returns>El tiempo actual de interpolación.</returns>
+	/**
+	* Devuelve el tiempo actual de interpolación, lo que implica tener en
+	* cuenta un tiempo de base, y un retraso provocado por la ventana de
+	* interpolación.
+	*/
 	protected float GetInterpolationTime() {
+		// Verifica si Δs debería multiplicarse por algún factor de la ventana.
 		return Time.unscaledTime - baseTime - Δs;
 	}
 
-	/// <summary>
-	/// Intenta hallar una snapshot cuyo tiempo sea inmediatamente anterior
-	/// al indicado.
-	/// </summary>
-	/// <param name = "time">El tiempo indicado.</param>
-	/// <returns>Una snapshot cuyo tiempo es mayor o igual al
-		/// indicado.</returns>
+	/**
+	* Intenta hallar una snapshot cuyo tiempo sea inmediatamente anterior al
+	* indicado (por defecto). El tiempo debe ser mayor o igual al indicado.
+	* Devuelve null si no encuentra una snapshot adecuada.
+	*/
 	protected Snapshot GetSnapshotByDefault(float time) {
 		Snapshot defaultSnapshot = null;
 		while (0 < snapshots.Count) {
@@ -119,13 +76,12 @@ public class SnapshotInterpolator {
 		return defaultSnapshot;
 	}
 
-	/// <summary>
-	/// Intenta hallar una snapshot cuyo tiempo asociado se encuentre
-	/// inmediatamente por encima del especificado.
-	/// </summary>
-	/// <param name = "time">El tiempo especificado.</param>
-	/// <returns>Una snapshot cuyo tiempo sea estrictamente mayor al
-	/// indicado, o null en otro caso.</returns>
+	/**
+	* Intenta hallar una snapshot cuyo tiempo asociado se encuentre
+	* inmediatamente por encima del especificado (por exceso). El tiempo debe
+	* ser estrictamente mayor. Devuelve null si no encuentra una snapshot
+	* disponible.
+	*/
 	protected Snapshot GetSnapshotByExcess(float time) {
 		Snapshot excessSnapshot = null;
 		while (0 < snapshots.Count) {
@@ -141,16 +97,17 @@ public class SnapshotInterpolator {
 		return excessSnapshot;
 	}
 
-	/// <summary>
-	/// Devuelve el tiempo asociado al número de secuencia indicado, como
-	/// múltiplos del factor Δs.
-	/// </summary>
-	/// <param name = "sequence">El número de secuencia.</param>
-	/// <returns>El tiempo en segundos.</returns>
+	/**
+	* Devuelve el tiempo asociado al número de secuencia indicado, como
+	* múltiplos del factor Δs.
+	*/
 	protected float GetTimeForSequence(int sequence) {
 		return sequence * Δs;
 	}
 
+	/**
+	* Desplaza la ventana actual de interpolación, para el tiempo actual.
+	*/
 	protected SnapshotInterpolator SlideWindow() {
 		float t = GetInterpolationTime();
 		Debug.Log("\tInterpolation time: " + t);
@@ -189,10 +146,10 @@ public class SnapshotInterpolator {
 		return this;
 	}
 
-	/// <summary>
-	/// Intercambia las snapshots por defecto y exceso, para que la
-	/// interpolación avance correctamente.
-	/// </summary>
+	/**
+	* Intercambia las snapshots por defecto y exceso, para que la interpolación
+	* avance correctamente.
+	*/
 	protected SnapshotInterpolator SwitchSnapshots() {
 		timestamp = -1.0f;
 		from = to;
@@ -200,15 +157,103 @@ public class SnapshotInterpolator {
 		return SlideWindow().TrySetTimestamp();
 	}
 
-	/// <summary>
-	/// En caso de que se pueda aplicar una interpolación en los próximos
-	/// intervalos, se computa el tiempo base para esa interpolación. Esto
-	/// permite computar el punto de interpolación entre dos snapshots.
-	/// </summary>
+	/**
+	* En caso de que se pueda aplicar una interpolación en los próximos
+	* intervalos, se computa el tiempo base para esa interpolación. Esto
+	* permite computar el punto de interpolación entre dos snapshots.
+	*/
 	protected SnapshotInterpolator TrySetTimestamp() {
 		if (CanInterpolate() && timestamp < 0) {
 			timestamp = GetInterpolationTime();
 		}
 		return this;
+	}
+
+	/**
+	* Agrega una snapshot al interpolador, en caso de que sea válida (es decir,
+	* en caso de que no sea antigua).
+	*/
+	protected SnapshotInterpolator AddPacket(Packet packet) {
+		Snapshot snapshot = new Snapshot(packet);
+		if (lastSequence < snapshot.sequence) {
+			if (lastSequence < 0) {
+				baseTime = Time.unscaledTime - GetTimeForSequence(snapshot.sequence);
+				Debug.Log("\tBase time: " + baseTime);
+			}
+			lastSequence = snapshot.sequence;
+			snapshots.Enqueue(snapshot);
+			Debug.Log("\tSecuencia agregada: " + snapshot.sequence);
+		}
+		else {
+			Debug.Log("\tSe eliminó un paquete porque su secuencia es antigua (" + snapshot.sequence + ", last = " + lastSequence + ").");
+		}
+		return this;
+	}
+
+	/** **********************************************************************
+	******************************* PUBLIC API ********************************
+	 *********************************************************************** */
+
+	/**
+	* Agrega una cola de snapshots, ordenadas según el tiempo de llegada. Si es
+	* la primera vez que se agregan paquetes, se descartan todos excepto el
+	* último (el más reciente), para que la interpolación se acomode al estado
+	* más actual de la simulación.
+	*/
+	public SnapshotInterpolator AddPackets(Queue<Packet> packets) {
+		if (lastSequence < 0) {
+			while (1 < packets.Count) {
+				packets.Dequeue();
+			}
+		}
+		foreach (Packet packet in packets) {
+			AddPacket(packet);
+		}
+		return this;
+	}
+
+	/**
+	* Actualiza la snapshot para el tiempo actual, efectivamente interpolando
+	* el estado. Si no se puede interpolar, la snapshot no se ve afectada.
+	*/
+	public SnapshotInterpolator Update() {
+		// Agregar verificación de secuencias corridas y validar ventana.
+		SlideWindow().TrySetTimestamp();
+		if (CanInterpolate()) {
+			float Δt = GetInterpolationDelta();
+			float Δn = Δt/Δs;
+			Debug.Log("\tDelta Δt = " + Δt);
+			Debug.Log("\tClamp Δn = " + 100 * Δn + " %");
+			now.Interpolate(from, to, Δn);
+		}
+		return this;
+	}
+
+	public class Builder {
+
+		public Snapshot snapshot;
+		public int window;
+		public int sps;
+
+		public Builder() {}
+
+		public Builder Snapshot(Snapshot snapshot) {
+			this.snapshot = snapshot;
+			return this;
+		}
+
+		public Builder Window(int window) {
+			this.window = window;
+			return this;
+		}
+
+		public Builder SPS(int sps) {
+			this.sps = sps;
+			return this;
+		}
+
+		public SnapshotInterpolator Build() {
+			return new SnapshotInterpolator(this);
+		}
 	}
 }
