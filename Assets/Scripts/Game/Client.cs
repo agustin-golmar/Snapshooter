@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 	/**
@@ -145,13 +146,15 @@ public class Client : IClosable {
 			int sequence = ackResponse.GetInteger();
 			ackResponse.Reset();
 			Debug.Log("ACK received for " + endpoint + ". Sequence: " + sequence);
-			for (int i = 0; i <= sequence; ++i) {
+			packets = new SortedDictionary<int,Packet>(packets.Where(x=> x.Key>sequence).ToDictionary(kvp => kvp.Key, kvp => kvp.Value));
+			timedPackets = new SortedDictionary<int,Packet>(timedPackets.Where(x=> x.Key>sequence).ToDictionary(kvp => kvp.Key, kvp => kvp.Value));
+			// for (int i = 0; i <= sequence; ++i) {
 				// !!!
 				// Lento: si 'sequence' es 10000 corre 10000 veces en cada frame.
 				// !!!
-				packets.Remove(i);
-				timedPackets.Remove(i);
-			}
+			//	packets.Remove(i);
+			//	timedPackets.Remove(i);
+			//}
 			Debug.Log("Packets Remaining: " + packets.Count);
 			switch (endpoint) {
 				case Endpoint.JOIN : {
