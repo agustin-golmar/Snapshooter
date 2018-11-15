@@ -51,7 +51,7 @@
 		public void PutInt(int value, int min, int max)
 		{
 			int range = max - min;
-			PutBits(value-min,(int)Math.Log(range,2)+1);
+			PutBits(value-min,(int)Math.Ceiling(Math.Log(range+1,2)));
 
 		}
 
