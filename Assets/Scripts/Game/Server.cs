@@ -309,6 +309,14 @@ public class Server : IClosable, IAPI {
 					ghostTransform.Translate(delta, 0, 0);
 					break;
 				}
+				case Direction.ROTATE_LEFT : {
+					ghostTransform.Rotate(0,10*delta,0);
+					break;
+				}
+				case Direction.ROTATE_RIGHT : {
+					ghostTransform.Rotate(0,-10*delta,0);
+					break;
+				}
 			}
 		}
 		SaveGhostFor(id);

@@ -12,6 +12,8 @@ public class Player : MonoBehaviour {
 	private const string KEY_A = "a";
 	private const string KEY_S = "s";
 	private const string KEY_D = "d";
+	private const string KEY_Q = "q";
+	private const string KEY_E = "e";
 
 	protected Configuration config;
 	protected Snapshot snapshot;
@@ -52,6 +54,13 @@ public class Player : MonoBehaviour {
 		if (Input.GetKey(KEY_D)) {
 			directions.Add(Direction.STRAFING_RIGHT);
 		}
+		if (Input.GetKey(KEY_Q)) {
+			directions.Add(Direction.ROTATE_LEFT);
+		}
+		if (Input.GetKey(KEY_E)) {
+			directions.Add(Direction.ROTATE_RIGHT);
+		}
+
 		client.Move(directions);
 	}
 
@@ -74,6 +83,7 @@ public class Player : MonoBehaviour {
 	protected void LateUpdate() {
 		//Camera.main.transform.LookAt(transform);
 		Camera.main.transform.position = transform.position;
+		Camera.main.transform.rotation = transform.rotation;
 	}
 
 	/** **********************************************************************

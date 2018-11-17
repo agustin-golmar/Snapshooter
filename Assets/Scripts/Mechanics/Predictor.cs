@@ -72,6 +72,14 @@ public class Predictor {
 					player.transform.Translate(delta, 0, 0);
 					break;
 				}
+				case Direction.ROTATE_LEFT : {
+					player.transform.Rotate(0,10*delta,0);
+					break;
+				}
+				case Direction.ROTATE_RIGHT : {
+					player.transform.Rotate(0,-10*delta,0);
+					break;
+				}
 			}
 		}
 	}
