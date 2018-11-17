@@ -41,10 +41,11 @@ public class SnapshotInterpolator {
 	}
 
 	/**
-	* Devuelve el tiempo dentro del intervalo de interpolación.
+	* Devuelve el tiempo asociado al número de secuencia indicado, como
+	* múltiplos del factor Δs.
 	*/
-	protected float GetInterpolationDelta() {
-		return GetInterpolationTime() - timestamp;
+	public float GetTimeForSequence(int sequence) {
+		return sequence * Δs;
 	}
 
 	/**
@@ -52,9 +53,16 @@ public class SnapshotInterpolator {
 	* cuenta un tiempo de base, y un retraso provocado por la ventana de
 	* interpolación.
 	*/
-	protected float GetInterpolationTime() {
+	public float GetInterpolationTime() {
 		// Verifica si Δs debería multiplicarse por algún factor de la ventana.
 		return Time.unscaledTime - baseTime - Δs;
+	}
+
+	/**
+	* Devuelve el tiempo dentro del intervalo de interpolación.
+	*/
+	protected float GetInterpolationDelta() {
+		return GetInterpolationTime() - timestamp;
 	}
 
 	/**
@@ -98,28 +106,17 @@ public class SnapshotInterpolator {
 	}
 
 	/**
-	* Devuelve el tiempo asociado al número de secuencia indicado, como
-	* múltiplos del factor Δs.
-	*/
-	protected float GetTimeForSequence(int sequence) {
-		return sequence * Δs;
-	}
-
-	/**
 	* Desplaza la ventana actual de interpolación, para el tiempo actual.
 	*/
 	protected SnapshotInterpolator SlideWindow() {
 		float t = GetInterpolationTime();
-		Debug.Log("\tInterpolation time: " + t);
 		if (from == null) {
 			from = GetSnapshotByDefault(t);
-			if (from != null) Debug.Log("\t\tNew default time (from): " + GetTimeForSequence(from.sequence));
-			else Debug.Log("\t\tNo se puede encontrar una snapshot por defecto (from).");
 		}
 		else {
 			float fromTime = GetTimeForSequence(from.sequence);
 			if (fromTime <= t && t < fromTime + Δs) {
-				Debug.Log("\t\tDefault (from), todavía no venció: " + fromTime);
+				// El tiempo por defecto (from), no venció.
 			}
 			else {
 				SwitchSnapshots();
@@ -128,18 +125,14 @@ public class SnapshotInterpolator {
 		if (from != null) {
 			if (to == null) {
 				to = GetSnapshotByExcess(t);
-				if (to != null) Debug.Log("\t\tNew excess time (to): " + GetTimeForSequence(to.sequence));
-				else Debug.Log("\t\tNo se puede encontrar una snapshot por exceso (to).");
 			}
 			else {
 				float toTime = GetTimeForSequence(to.sequence);
 				if (t < toTime) {
-					Debug.Log("\t\tExcess (to), todavía no venció: " + toTime);
+					// El tiempo por exceso (to), no venció.
 				}
 				else {
 					to = GetSnapshotByExcess(t);
-					if (to != null) Debug.Log("\t\tNew excess time (to): " + GetTimeForSequence(from.sequence));
-					else Debug.Log("\t\tNo se puede encontrar una snapshot por exceso (to).");
 				}
 			}
 		}
@@ -178,14 +171,12 @@ public class SnapshotInterpolator {
 		if (lastSequence < snapshot.sequence) {
 			if (lastSequence < 0) {
 				baseTime = Time.unscaledTime - GetTimeForSequence(snapshot.sequence);
-				Debug.Log("\tBase time: " + baseTime);
 			}
 			lastSequence = snapshot.sequence;
 			snapshots.Enqueue(snapshot);
-			Debug.Log("\tSecuencia agregada: " + snapshot.sequence);
 		}
 		else {
-			Debug.Log("\tSe eliminó un paquete porque su secuencia es antigua (" + snapshot.sequence + ", last = " + lastSequence + ").");
+			// La secuencia es antigua, y el paquete se descarta.
 		}
 		return this;
 	}
@@ -222,8 +213,6 @@ public class SnapshotInterpolator {
 		if (CanInterpolate()) {
 			float Δt = GetInterpolationDelta();
 			float Δn = Δt/Δs;
-			Debug.Log("\tDelta Δt = " + Δt);
-			Debug.Log("\tClamp Δn = " + 100 * Δn + " %");
 			now.Interpolate(from, to, Δn);
 		}
 		return this;

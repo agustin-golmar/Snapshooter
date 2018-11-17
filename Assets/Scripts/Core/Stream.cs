@@ -83,12 +83,14 @@ public class Stream {
 	* aceptado en el Stream, se eliminan los más viejos.
 	*/
 	public Stream WriteAll(IEnumerable<Packet> packets) {
-		lock (streamLock) {
-			foreach (Packet packet in packets) {
-				this.packets.Enqueue(packet);
-			}
-			while (maxPacketsInQueue < this.packets.Count) {
-				Pop();
+		if (packets.GetEnumerator().MoveNext()) {
+			lock (streamLock) {
+				foreach (Packet packet in packets) {
+					this.packets.Enqueue(packet);
+				}
+				while (maxPacketsInQueue < this.packets.Count) {
+					Pop();
+				}
 			}
 		}
 		return this;

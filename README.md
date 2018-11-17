@@ -1,4 +1,6 @@
-[![...](https://img.shields.io/badge/Unity-v2018.2.14f1-purple.svg)](https://unity3d.com/)
+[![...](.resources/image/readme-header.png)](https://github.com/agustin-golmar/Snapshooter)
+[![...](https://img.shields.io/badge/Unity-v2018.2.16f1-purple.svg)](https://unity3d.com/)
+[![...](https://img.shields.io/badge/release-v1.0-green.svg)](https://github.com/agustin-golmar/Snapshooter/releases)
 
 # Snapshooter
 

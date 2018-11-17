@@ -21,9 +21,10 @@ public class Server : IClosable, IAPI {
 	protected Snapshot snapshot;
 	protected Threading threading;
 	protected float lastSnapshot;
-	protected float Δs;
 	protected Dictionary<string, Packet> joins;
 	protected SortedDictionary<int, Packet>[] acks;
+	protected GameObject ghost;
+	protected Transform ghostTransform;
 
 	public Server(Configuration configuration) {
 		config = configuration;
@@ -40,12 +41,13 @@ public class Server : IClosable, IAPI {
 		snapshot = config.GetServerSnapshot();
 		threading = new Threading();
 		lastSnapshot = 0.0f;
-		Δs = 1.0f / config.snapshotsPerSecond;
 		joins = new Dictionary<string, Packet>();
 		acks = new SortedDictionary<int, Packet>[config.maxPlayers];
 		for (int i = 0; i < config.maxPlayers; ++i) {
 			acks[i] = new SortedDictionary<int, Packet>();
 		}
+		ghost = new GameObject("Server Ghost");
+		ghostTransform = ghost.transform;
 	}
 
 	/**
@@ -58,7 +60,6 @@ public class Server : IClosable, IAPI {
 		int id = request.GetInteger();
 		request.Reset();
 		Packet response;
-		Debug.Log("Dispatching request with ID: " + id);
 		if (0 <= id && acks[id].TryGetValue(sequence, out response)) {
 			return response;
 		}
@@ -81,11 +82,12 @@ public class Server : IClosable, IAPI {
 			}
 			default : {
 				Debug.Log("Unknown Endpoint: " + endpoint);
-				return GetResponseHeader(request, 7).Build();
+				return GetResponseHeader(request, 0).Build();
 			}
 		}
 		if (0 <= id) {
 			acks[id].Add(sequence, response);
+			snapshot.acks[id] = sequence;
 		}
 		return response;
 	}
@@ -126,8 +128,8 @@ public class Server : IClosable, IAPI {
 	* Donde el tipo de paquete, endpoint y número de secuencia se corresponden
 	* con el request que originó este response.
 	*/
-	protected Packet.Builder GetResponseHeader(Packet request, int maxPacketSize) {
-		Packet.Builder response = new Packet.Builder(maxPacketSize)
+	protected Packet.Builder GetResponseHeader(Packet request, int payloadSize) {
+		Packet.Builder response = new Packet.Builder(7 + payloadSize)
 					.AddPacketType(PacketType.ACK)
 					.AddPacketType(request.GetPacketType())
 					.AddEndpoint(request.GetEndpoint())
@@ -152,13 +154,31 @@ public class Server : IClosable, IAPI {
 		Queue<Packet> packets = input.ReadAll(type);
 		foreach (Packet request in packets) {
 			int id = request.Reset(6).GetInteger();
-			Debug.Log("Server FrameHandler dispatch " + type + " (ID = " + id + ")");
 			Packet response = Dispatch(request.Reset());
 			if (0 <= id) {
 				outputs[id].Write(response);
-				//local.Send(links[id], response);
 			}
 		}
+	}
+
+	/**
+	* Carga en la transformada fantasma los parámetros de un cliente
+	* específico, de modo que pueda utilizarse para computar traslaciones u
+	* otras operaciones complejas.
+	*/
+	protected Transform LoadGhostFor(int id) {
+		ghostTransform.SetPositionAndRotation(snapshot.positions[id], snapshot.rotations[id]);
+		return ghostTransform;
+	}
+
+	/**
+	* Actualiza el estado de la snapshot, luego de computar una transformación
+	* sobre el objeto fantasma.
+	*/
+	protected Transform SaveGhostFor(int id) {
+		snapshot.positions[id] = ghostTransform.position;
+		snapshot.rotations[id] = ghostTransform.rotation;
+		return ghostTransform;
 	}
 
 	/** **********************************************************************
@@ -185,13 +205,12 @@ public class Server : IClosable, IAPI {
 		HandleAllRequest(PacketType.EVENT);
 		HandleAllRequest(PacketType.FLOODING);
 		// Procesar snapshot:
-		int currentSnapshot = Mathf.FloorToInt(Time.unscaledTime/Δs);
+		int currentSnapshot = Mathf.FloorToInt(Time.unscaledTime * config.snapshotsPerSecond);
 		if (lastSnapshot < currentSnapshot) {
 			lastSnapshot = currentSnapshot;
 			snapshot.sequence = currentSnapshot;
 			snapshot.timestamp = Time.unscaledTime;
 			if (snapshot.players == 0) return;
-			Debug.Log("Snapshooting at " + Time.unscaledTime + " sec. (snapshot " + currentSnapshot + ").");
 			Packet packet = snapshot.ToPacket();
 			foreach (Stream output in outputs) {
 				output.Write(packet);
@@ -250,15 +269,17 @@ public class Server : IClosable, IAPI {
 				.Position(index, GetRespawn(id))
 				.Rotation(index, Quaternion.identity);
 			// Agregar el nuevo ID al response y enviar:
-			Packet response = GetResponseHeader(request, 11)
+			Packet response = GetResponseHeader(request, 32)
 					.AddInteger(id)
+					.AddVector(snapshot.positions[id])
+					.AddQuaternion(snapshot.rotations[id])
 					.Build();
 			// Reliable join:
 			joins.Add(key, response);
 			Debug.Log("Server successfully join a new client: " + id);
 			local.Send(client, response);
 		}
-		return GetResponseHeader(request, 7).Build();
+		return GetResponseHeader(request, 0).Build();
 	}
 
 	/**
@@ -266,44 +287,45 @@ public class Server : IClosable, IAPI {
 	*/
 	public Packet Move(Packet request) {
 		int id = request.Reset(6).GetInteger();
-		Direction direction = request.GetDirection();
-		request.Reset();
-		Debug.Log("Server moving player ID = " + id + " to " + direction + ".");
-		// De dónde proviene Time.deltaTime?
-		float delta = config.playerSpeed * Time.deltaTime;
-		Transform transform = snapshot.transforms[id];
-		switch (direction) {
-			case Direction.FORWARD : {
-				transform.Translate(0, 0, delta);
-				break;
-			}
-			case Direction.STRAFING_LEFT : {
-				transform.Rotate(Vector3.down, 30.0f * delta);
-				break;
-			}
-			case Direction.BACKWARD : {
-				transform.Translate(0, 0, -delta);
-				break;
-			}
-			case Direction.STRAFING_RIGHT : {
-				transform.Rotate(Vector3.up, 30.0f * delta);
-				break;
+		float Δt = request.GetFloat();
+		int directions = request.GetInteger();
+		float delta = Δt * config.playerSpeed;
+		LoadGhostFor(id);
+		for (int k = 0; k < directions; ++k) {
+			switch (request.GetDirection()) {
+				case Direction.FORWARD : {
+					ghostTransform.Translate(0, 0, delta);
+					break;
+				}
+				case Direction.STRAFING_LEFT : {
+					ghostTransform.Translate(-delta, 0, 0);
+					break;
+				}
+				case Direction.BACKWARD : {
+					ghostTransform.Translate(0, 0, -delta);
+					break;
+				}
+				case Direction.STRAFING_RIGHT : {
+					ghostTransform.Translate(delta, 0, 0);
+					break;
+				}
 			}
 		}
-		return GetResponseHeader(request, 7).Build();
+		SaveGhostFor(id);
+		return GetResponseHeader(request.Reset(), 0).Build();
 	}
 
 	/**
 	* Efectúa un disparo con el rifle (usando hit-scan).
 	*/
 	public Packet Shoot(Packet request) {
-		return GetResponseHeader(request, 7).Build();
+		return GetResponseHeader(request, 0).Build();
 	}
 
 	/**
 	* Lanza una granada cuyo daño es en área (AoE).
 	*/
 	public Packet Frag(Packet request) {
-		return GetResponseHeader(request, 7).Build();
+		return GetResponseHeader(request, 0).Build();
 	}
 }

@@ -24,6 +24,8 @@ public class Client : IClosable {
 	protected SortedDictionary<int, Packet> packets;
 	protected SortedDictionary<int, Packet> timedPackets;
 	protected float lastTime;
+	protected Player player;
+	protected Predictor predictor;
 
 	public Client(Configuration configuration) {
 		config = configuration;
@@ -56,6 +58,8 @@ public class Client : IClosable {
 		timedPackets = new SortedDictionary<int, Packet>();
 		lastTime = 0;
 		timeout = config.timeout;
+		player = null;
+		predictor = null;
 	}
 
 	/**
@@ -90,8 +94,8 @@ public class Client : IClosable {
 	* construirse bajo este método. El tamaño del paquete final no contiene
 	* bytes de más debido a que la clase Packet aplica shrinking.
 	*/
-	protected Packet.Builder GetRequestHeader(PacketType type, Endpoint endpoint, int maxPacketSize) {
-		return new Packet.Builder(maxPacketSize)
+	protected Packet.Builder GetRequestHeader(PacketType type, Endpoint endpoint, int payloadSize) {
+		return new Packet.Builder(10 + payloadSize)
 			.AddPacketType(type)
 			.AddEndpoint(endpoint)
 			.AddInteger(sequence++)
@@ -103,17 +107,25 @@ public class Client : IClosable {
 	* respuesta afirmativa, con un ID válido (mayor o igual a cero).
 	*/
 	protected void HandleJoin(Packet response) {
-		Debug.Log("Creating player...");
-		id = response.Reset(7).GetInteger();
-		response.Reset();
-		// Debería encontar su ID dentro de la snapshot.
-		GameObject.Find("World")
-			.GetComponent<World>()
-			.LoadSnapshot(snapshot)
-			.CreatePlayer(Vector3.zero, Quaternion.identity)
-			.SetClient(this)
-			.SetID(id)
-			.SetSnapshot(snapshot);
+		if (player != null) {
+			Debug.Log("Player already created.");
+		}
+		else {
+			Debug.Log("Creating player...");
+			id = response.Reset(7).GetInteger();
+			Vector3 respawn = response.GetVector();
+			Quaternion rotation = response.GetQuaternion();
+			response.Reset();
+			// Crear el jugador y el predictor.
+			player = GameObject.Find("World")
+				.GetComponent<World>()
+				.LoadSnapshot(snapshot)
+				.CreatePlayer(respawn, rotation)
+				.SetClient(this)
+				.SetID(id)
+				.SetSnapshot(snapshot);
+			predictor = new Predictor(config, snapshot, player);
+		}
 	}
 
 	/** **********************************************************************
@@ -145,17 +157,14 @@ public class Client : IClosable {
 			Endpoint endpoint = ackResponse.Reset(2).GetEndpoint();
 			int sequence = ackResponse.GetInteger();
 			ackResponse.Reset();
-			Debug.Log("ACK received for " + endpoint + ". Sequence: " + sequence);
-			packets = new SortedDictionary<int,Packet>(packets.Where(x=> x.Key>sequence).ToDictionary(kvp => kvp.Key, kvp => kvp.Value));
-			timedPackets = new SortedDictionary<int,Packet>(timedPackets.Where(x=> x.Key>sequence).ToDictionary(kvp => kvp.Key, kvp => kvp.Value));
-			// for (int i = 0; i <= sequence; ++i) {
-				// !!!
-				// Lento: si 'sequence' es 10000 corre 10000 veces en cada frame.
-				// !!!
-			//	packets.Remove(i);
-			//	timedPackets.Remove(i);
-			//}
-			Debug.Log("Packets Remaining: " + packets.Count);
+			//Debug.Log("ACK received for " + endpoint + ". Sequence: " + sequence);
+			packets = new SortedDictionary<int, Packet>(packets
+				.Where(x => x.Key > sequence)
+				.ToDictionary(kvp => kvp.Key, kvp => kvp.Value));
+			timedPackets = new SortedDictionary<int, Packet>(timedPackets
+				.Where(x => x.Key > sequence)
+				.ToDictionary(kvp => kvp.Key, kvp => kvp.Value));
+			//Debug.Log("Packets Remaining: " + packets.Count);
 			switch (endpoint) {
 				case Endpoint.JOIN : {
 					HandleJoin(ackResponse);
@@ -166,11 +175,14 @@ public class Client : IClosable {
 		// Procesar SNAPSHOTs:
 		Queue<Packet> snapshots = input.ReadAll(PacketType.SNAPSHOT);
 		interpolator.AddPackets(snapshots).Update();
+		// Predecir (si es necesario):
+		if (config.usePrediction && player != null) {
+			predictor.Validate();
+		}
 		// Procesar 'reliability':
 		output.WriteAll(packets.Values);
 		float curTime = Time.unscaledTime;
 		if (curTime >= lastTime + timeout) {
-			Debug.Log("Client reliability TIMEOUT.");
 			lastTime = curTime;
 			output.WriteAll(timedPackets.Values);
 		}
@@ -190,7 +202,7 @@ public class Client : IClosable {
 	* Conecta un cliente a la partida (si la sala no está llena).
 	*/
 	public void Join() {
-		Packet request = GetRequestHeader(PacketType.EVENT, Endpoint.JOIN, 32)
+		Packet request = GetRequestHeader(PacketType.EVENT, Endpoint.JOIN, 19)
 			.AddString(config.clientAddress)
 			.AddInteger(config.clientListeningPort)
 			.Build();
@@ -199,12 +211,22 @@ public class Client : IClosable {
 	}
 
 	/**
-	* Mueve un jugador en alguna dirección. No maneja el 'straferunning'.
+	* Mueve un jugador en alguna dirección. No maneja el 'straferunning'. Se
+	* encarga de aplicar predicción, en caso de que esté habilitada.
 	*/
-	public void Move(Direction direction) {
-		Packet request = GetRequestHeader(PacketType.FLOODING, Endpoint.MOVE, 11)
-			.AddDirection(direction)
-			.Build();
+	public void Move(List<Direction> directions) {
+		float Δt = Time.deltaTime;
+		if (config.usePrediction) {
+			predictor.PredictMove(directions, Δt);
+			predictor.SaveState(sequence);
+		}
+		Packet.Builder builder = GetRequestHeader(PacketType.FLOODING, Endpoint.MOVE, 8 + directions.Count)
+			.AddFloat(Δt)
+			.AddInteger(directions.Count);
+		foreach (Direction direction in directions) {
+			builder.AddDirection(direction);
+		}
+		Packet request = builder.Build();
 		packets.Add(sequence - 1, request);
 		output.Write(request);
 	}
@@ -213,7 +235,7 @@ public class Client : IClosable {
 	* Efectúa un disparo con el rifle (usando hit-scan). Se envía el target.
 	*/
 	public void Shoot(Vector3 target) {
-		Packet request = GetRequestHeader(PacketType.FLOODING, Endpoint.SHOOT, 32)
+		Packet request = GetRequestHeader(PacketType.FLOODING, Endpoint.SHOOT, 12)
 			.AddVector(target)
 			.Build();
 		packets.Add(sequence - 1, request);
@@ -225,7 +247,7 @@ public class Client : IClosable {
 	* dirección de la fuerza de lanzamiento.
 	*/
 	public void Frag(Vector3 force) {
-		Packet request = GetRequestHeader(PacketType.FLOODING, Endpoint.FRAG, 32)
+		Packet request = GetRequestHeader(PacketType.FLOODING, Endpoint.FRAG, 12)
 			.AddVector(force)
 			.Build();
 		packets.Add(sequence - 1, request);

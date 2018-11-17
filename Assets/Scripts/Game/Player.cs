@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System.Collections.Generic;
+using UnityEngine;
 
 	/**
 	* El jugador local.
@@ -16,6 +17,7 @@ public class Player : MonoBehaviour {
 	protected Snapshot snapshot;
 	protected Client client;
 	protected int id;
+	protected List<Direction> directions;
 
 	/**
 	* Obtiene la configuración global.
@@ -27,65 +29,42 @@ public class Player : MonoBehaviour {
 	}
 
 	/**
+	* Inicializa las variables de instancia.
+	*/
+	protected void Start() {
+		directions = new List<Direction>(4);
+	}
+
+	/**
 	* Envía un comando de movimiento al servidor.
 	*/
 	protected void Move() {
+		directions.Clear();
 		if (Input.GetKey(KEY_W)) {
-			client.Move(Direction.FORWARD);
+			directions.Add(Direction.FORWARD);
 		}
 		if (Input.GetKey(KEY_A)) {
-			client.Move(Direction.STRAFING_LEFT);
+			directions.Add(Direction.STRAFING_LEFT);
 		}
 		if (Input.GetKey(KEY_S)) {
-			client.Move(Direction.BACKWARD);
+			directions.Add(Direction.BACKWARD);
 		}
 		if (Input.GetKey(KEY_D)) {
-			client.Move(Direction.STRAFING_RIGHT);
+			directions.Add(Direction.STRAFING_RIGHT);
 		}
+		client.Move(directions);
 	}
 
 	/**
-	* Aplica movimiento sobre el jugador (en caso de utilizar prediction).
-	*/
-	protected void PredictMove() {
-		float delta = config.playerSpeed * Time.deltaTime;
-		if (Input.GetKey(KEY_W)) {
-			transform.Translate(0, 0, delta);
-		}
-		if (Input.GetKey(KEY_A)) {
-			transform.Rotate(Vector3.down, 30.0f * delta);
-		}
-		if (Input.GetKey(KEY_S)) {
-			transform.Translate(0, 0, -delta);
-		}
-		if (Input.GetKey(KEY_D)) {
-			transform.Rotate(Vector3.up, 30.0f * delta);
-		}
-	}
-
-	/**
-	* Actualiza el estado del jugador desde la snapshot. En caso de utilizar
-	* predicción, se debe comparar el estado contra la predicción. Si hay una
-	* diferencia substancial, se aplica una corrección.
+	* Actualiza el estado del jugador. El estado se actualiza automáticamente
+	* al activar predicción, o desde la snapshot global, en caso contrario.
 	*/
 	protected void Update() {
+		// Actualizar vida en HUD usando:
+		// snapshot.lifes[id];
 		Move();
-		if (config.usePrediction) {
-			PredictMove();
-			// Contra qué frame debería comparar?
-			if (config.ΔPosition < Vector3.Distance(transform.position, snapshot.transforms[id].position)) {
-				Debug.Log("Corrigiendo posición (" + Vector3.Distance(transform.position, snapshot.transforms[id].position) + ").");
-				transform.position = snapshot.transforms[id].position;
-			}
-			if (config.ΔRotation < Quaternion.Angle(transform.rotation, snapshot.transforms[id].rotation)) {
-				Debug.Log("Corrigiendo rotación (" + Quaternion.Angle(transform.rotation, snapshot.transforms[id].rotation) + ").");
-				transform.rotation = snapshot.transforms[id].rotation;
-			}
-		}
-		else {
-			// Actualizar vida en HUD.
-			// snapshot.lifes[id];
-			transform.SetPositionAndRotation(snapshot.transforms[id].position, snapshot.transforms[id].rotation);
+		if (!config.usePrediction) {
+			transform.SetPositionAndRotation(snapshot.positions[id], snapshot.rotations[id]);
 		}
 	}
 
@@ -99,6 +78,10 @@ public class Player : MonoBehaviour {
 	/** **********************************************************************
 	******************************* PUBLIC API ********************************
 	 *********************************************************************** */
+
+	public int GetID() {
+		return id;
+	}
 
 	public Player SetClient(Client client) {
 		this.client = client;

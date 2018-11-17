@@ -10,6 +10,7 @@ using UnityEngine;
 	*	-El timestamp de dicha snapshot.
 	*	-La cantidad de jugadores en la partida.
 	*	-El ID de cada jugador.
+	*	-La secuencia del último ACK para ese cliente.
 	*	-La vida de cada jugador (de 0 a 100).
 	*	-Un vector de posición por cada jugador.
 	*	-Un quaternion de rotación por cada jugador.
@@ -28,8 +29,10 @@ public class Snapshot {
 
 	// Propiedades de los jugadores:
 	public int [] ids;
+	public int [] acks;
 	public int [] lifes;
-	public Transform [] transforms;
+	public Vector3 [] positions;
+	public Quaternion [] rotations;
 
 	// Otros datos...
 
@@ -38,13 +41,10 @@ public class Snapshot {
 	*/
 	protected Snapshot Allocate(int maxPlayers) {
 		ids = new int [maxPlayers];
+		acks = new int [maxPlayers];
 		lifes = new int [maxPlayers];
-		transforms = new Transform [maxPlayers];
-		for (int k = 0; k < maxPlayers; ++k) {
-			transforms[k] = new GameObject().transform;
-			transforms[k].position = Vector3.zero;
-			transforms[k].rotation = Quaternion.identity;
-		}
+		positions = new Vector3 [maxPlayers];
+		rotations = new Quaternion [maxPlayers];
 		return this;
 	}
 
@@ -56,7 +56,7 @@ public class Snapshot {
 	/**
 	* Crea una snapshot desde un paquete de bytes.
 	*/
-	public Snapshot(Packet packet) {				// Evitar que se creen transformadas cada vez!!!
+	public Snapshot(Packet packet) {
 		packet.Reset(1);
 		sequence = packet.GetInteger();
 		timestamp = packet.GetFloat();
@@ -64,9 +64,10 @@ public class Snapshot {
 		Allocate(players);
 		for (int k = 0; k < players; ++k) {
 			ids[k] = packet.GetInteger();
+			acks[k] = packet.GetInteger();
 			lifes[k] = packet.GetInteger();
-			transforms[k].position = packet.GetVector();
-			transforms[k].rotation = packet.GetQuaternion();
+			positions[k] = packet.GetVector();
+			rotations[k] = packet.GetQuaternion();
 		}
 		// Otros datos...
 		packet.Reset();
@@ -86,9 +87,10 @@ public class Snapshot {
 		players = Math.Min(from.players, to.players);
 		for (int k = 0; k < players; ++k) {
 			ids[k] = from.ids[k];
+			acks[k] = from.acks[k];
 			lifes[k] = from.lifes[k];
-			transforms[k].position = Vector3.Lerp(from.transforms[k].position, to.transforms[k].position, Δn);
-			transforms[k].rotation = Quaternion.Slerp(from.transforms[k].rotation, to.transforms[k].rotation, Δn);
+			positions[k] = Vector3.Lerp(from.positions[k], to.positions[k], Δn);
+			rotations[k] = Quaternion.Slerp(from.rotations[k], to.rotations[k], Δn);
 		}
 		// Otros datos...
 		return this;
@@ -98,16 +100,17 @@ public class Snapshot {
 	* Devuelve la representación en forma de paquete de bytes de esta snapshot.
 	*/
 	public Packet ToPacket() {
-		Packet.Builder builder = new Packet.Builder(13 + 36 * players)
+		Packet.Builder builder = new Packet.Builder(13 + 40 * players)
 			.AddPacketType(PacketType.SNAPSHOT)
 			.AddInteger(sequence)
 			.AddFloat(timestamp)
 			.AddInteger(players);
 		for (int k = 0; k < players; ++k) {
 			builder.AddInteger(ids[k])
+				.AddInteger(acks[k])
 				.AddInteger(lifes[k])
-				.AddVector(transforms[k].position)
-				.AddQuaternion(transforms[k].rotation);
+				.AddVector(positions[k])
+				.AddQuaternion(rotations[k]);
 		}
 		// Otros datos...
 		return builder.Build();
@@ -133,7 +136,12 @@ public class Snapshot {
 	}
 
 	public Snapshot ID(int index, int id) {
-		lifes[index] = id;
+		ids[index] = id;
+		return this;
+	}
+
+	public Snapshot ACK(int index, int sequence) {
+		acks[index] = sequence;
 		return this;
 	}
 
@@ -143,12 +151,12 @@ public class Snapshot {
 	}
 
 	public Snapshot Position(int index, Vector3 position) {
-		transforms[index].position = position;
+		positions[index] = position;
 		return this;
 	}
 
 	public Snapshot Rotation(int index, Quaternion rotation) {
-		transforms[index].rotation = rotation;
+		rotations[index] = rotation;
 		return this;
 	}
 }
