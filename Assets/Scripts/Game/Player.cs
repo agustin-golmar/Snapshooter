@@ -72,7 +72,8 @@ public class Player : MonoBehaviour {
 	* Actualiza la posición de la cámara. Debe ser en 1ra persona.
 	*/
 	protected void LateUpdate() {
-		Camera.main.transform.LookAt(transform);
+		//Camera.main.transform.LookAt(transform);
+		Camera.main.transform.position = transform.position;
 	}
 
 	/** **********************************************************************
