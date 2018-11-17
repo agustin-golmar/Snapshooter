@@ -54,10 +54,10 @@ public class Player : MonoBehaviour {
 		if (Input.GetKey(KEY_D)) {
 			directions.Add(Direction.STRAFING_RIGHT);
 		}
-		if (Input.GetKey(KEY_Q)) {
+		if (Input.GetAxis("Mouse X")<0) {
 			directions.Add(Direction.ROTATE_LEFT);
 		}
-		if (Input.GetKey(KEY_E)) {
+		if (Input.GetAxis("Mouse X")>0) {
 			directions.Add(Direction.ROTATE_RIGHT);
 		}
 
