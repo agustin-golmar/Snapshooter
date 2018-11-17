@@ -16,7 +16,7 @@ public class Configuration : MonoBehaviour {
 	protected List<IClosable> resources;
 
 	// Indica si se debe abortar la ejecución:
-	protected bool onExit;
+	protected volatile bool onExit;
 
 	// Snapshot global (server-side):
 	protected Snapshot serverSnapshot;

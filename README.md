@@ -8,7 +8,7 @@ An implementation of the _snapshot interpolation_ algorithm over _Unity 3D_.
 The game is basically a __FPS__ (_First Person Shooter_), with a simple map,
 simple rules, maximum fixed players, a sniper rifle with hit-scan (instant
 hit), infinite granades (no kidding), _pseudo lag-compensation_ (it is _pseudo_
-because its not validated), and posibly, _prediction_.
+because its not validated), and possibly, _prediction_.
 
 Oh... and you can't die.
 
