@@ -98,9 +98,10 @@ public class Server : IClosable, IAPI {
 	*/
 	protected void RequestHandler() {
 		IPEndPoint anyLink = new IPEndPoint(IPAddress.Any, 0);
+		System.Random random = new System.Random();
 		while (!config.OnExit()) {
 			byte [] payload = local.Receive(anyLink);
-			if (payload != null) {
+			if (payload != null && config.packetLossRatio <= random.NextDouble()) {
 				Packet packet = new Packet(payload);
 				input.Write(packet);
 			}
@@ -112,9 +113,12 @@ public class Server : IClosable, IAPI {
 	* envía y continúa con el siguiente stream.
 	*/
 	protected void ResponseHandler() {
+		System.Random random = new System.Random();
 		while (!config.OnExit()) {
 			for (int id = 0; id < outputs.Count; ++id) {
-				local.Send(links[id], outputs[id]);
+				if (config.packetLossRatio <= random.NextDouble()) {
+					local.Send(links[id], outputs[id]);
+				}
 			}
 		}
 	}
@@ -309,12 +313,12 @@ public class Server : IClosable, IAPI {
 					ghostTransform.Translate(delta, 0, 0);
 					break;
 				}
-				case Direction.ROTATE_LEFT : {
-					ghostTransform.Rotate(0,10*delta,0);
+				case Direction.ROTATE_RIGHT : {
+					ghostTransform.Rotate(0, 10 * delta, 0);
 					break;
 				}
-				case Direction.ROTATE_RIGHT : {
-					ghostTransform.Rotate(0,-10*delta,0);
+				case Direction.ROTATE_LEFT : {
+					ghostTransform.Rotate(0, -10 * delta, 0);
 					break;
 				}
 			}

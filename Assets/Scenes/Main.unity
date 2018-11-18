@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 0}
-  m_IndirectSpecularColor: {r: 0.4482448, g: 0.4982714, b: 0.575581, a: 1}
+  m_IndirectSpecularColor: {r: 0.44824505, g: 0.49827188, b: 0.57558143, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -319,7 +319,7 @@ MonoBehaviour:
   clientListeningPort: 10001
   maxPlayers: 8
   maxPacketSize: 128
-  maxPacketsInQueue: 10
+  maxPacketsInQueue: 100
   serverReceiveTimeout: 10
   serverSendTimeout: 10
   clientReceiveTimeout: 20

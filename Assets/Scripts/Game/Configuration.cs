@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
 
-	/*
+	/**
 	* Configuración global interna de la escena. Punto de entrada principal de
 	* una instancia de Snapshooter.
 	*/

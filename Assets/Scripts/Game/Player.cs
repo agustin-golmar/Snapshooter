@@ -54,13 +54,12 @@ public class Player : MonoBehaviour {
 		if (Input.GetKey(KEY_D)) {
 			directions.Add(Direction.STRAFING_RIGHT);
 		}
-		if (Input.GetAxis("Mouse X")<0) {
+		if (Input.GetAxis("Mouse X") < 0) {
 			directions.Add(Direction.ROTATE_LEFT);
 		}
-		if (Input.GetAxis("Mouse X")>0) {
+		if (Input.GetAxis("Mouse X") > 0) {
 			directions.Add(Direction.ROTATE_RIGHT);
 		}
-
 		client.Move(directions);
 	}
 
@@ -81,7 +80,6 @@ public class Player : MonoBehaviour {
 	* Actualiza la posición de la cámara. Debe ser en 1ra persona.
 	*/
 	protected void LateUpdate() {
-		//Camera.main.transform.LookAt(transform);
 		Camera.main.transform.position = transform.position;
 		Camera.main.transform.rotation = transform.rotation;
 	}
