@@ -1,0 +1,34 @@
+Post Processing Profil
+
+-Antialiasing
+	Fast approximate AA
+	Extreme Quality
+-AO
+	Intensity 1.43
+	Radius 3.23
+	Sample Count High
+	Downsmapling
+	Force Forward Compatibility
+	High precision
+
+-Bloom
+	Intensity 0.5
+	Threshold 0.8
+	Soft Knee 0.5
+	Radius 4
+	Anti Flicker ON
+	Dirt LensDirt01
+	Intensity 10
+
+-Color Grading
+	Filmic (ACES)
+	Post exposure 0.5
+	Temperature 10
+	Tint 1
+	Hue Shift 0
+	Saturation 1.21
+	Contrast 1.15
+	Trackballs Linear
+
+
+contact : nauthilusgames@gmail.com

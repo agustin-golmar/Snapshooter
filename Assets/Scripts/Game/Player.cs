@@ -34,7 +34,7 @@ public class Player : MonoBehaviour {
 	* Inicializa las variables de instancia.
 	*/
 	protected void Start() {
-		directions = new List<Direction>(4);
+		directions = new List<Direction>(6);
 	}
 
 	/**
@@ -63,6 +63,11 @@ public class Player : MonoBehaviour {
 		client.Move(directions);
 	}
 
+	protected void Shoot() {
+		if (Input.GetMouseButtonDown(0))
+			client.Shoot(transform.position,transform.forward);
+	}
+
 	/**
 	* Actualiza el estado del jugador. El estado se actualiza automáticamente
 	* al activar predicción, o desde la snapshot global, en caso contrario.
@@ -71,6 +76,7 @@ public class Player : MonoBehaviour {
 		// Actualizar vida en HUD usando:
 		// snapshot.lifes[id];
 		Move();
+		Shoot();
 		if (!config.usePrediction) {
 			transform.SetPositionAndRotation(snapshot.positions[id], snapshot.rotations[id]);
 		}

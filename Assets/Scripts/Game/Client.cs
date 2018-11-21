@@ -215,17 +215,26 @@ public class Client : IClosable {
 	* encarga de aplicar predicción, en caso de que esté habilitada.
 	*/
 	public void Move(List<Direction> directions) {
+		BitBuffer bb = new BitBuffer();
 		float Δt = Time.deltaTime;
 		if (config.usePrediction) {
 			predictor.PredictMove(directions, Δt);
 			predictor.SaveState(sequence);
 		}
-		Packet.Builder builder = GetRequestHeader(PacketType.FLOODING, Endpoint.MOVE, 8 + directions.Count)
-			.AddFloat(Δt)
-			.AddInteger(directions.Count);
+		//Debug.Log("dt: "+Δt);
+		bb.PutFloat(Δt,0,1,0.0001f);
+		//Debug.Log("Mando: "+directions.Count);
+		bb.PutInt(directions.Count,0,10);
+		Packet.Builder builder = GetRequestHeader(PacketType.FLOODING, Endpoint.MOVE, 8 + directions.Count);
+			//.AddFloat(Δt)
+			//.AddInteger(directions.Count);
 		foreach (Direction direction in directions) {
-			builder.AddDirection(direction);
+			//Debug.Log("Dir vale: "+direction);
+			//Debug.Log("Numero: " +(int)direction );
+			bb.PutDirection(direction);
+			//builder.AddDirection(direction);
 		}
+		builder.AddBitBuffer(bb);
 		Packet request = builder.Build();
 		packets.Add(sequence - 1, request);
 		output.Write(request);
@@ -234,10 +243,16 @@ public class Client : IClosable {
 	/**
 	* Efectúa un disparo con el rifle (usando hit-scan). Se envía el target.
 	*/
-	public void Shoot(Vector3 target) {
+	public void Shoot(Vector3 position,Vector3 target) {
 		Packet request = GetRequestHeader(PacketType.FLOODING, Endpoint.SHOOT, 12)
 			.AddVector(target)
 			.Build();
+		Debug.DrawRay(position,10*target,Color.red,5);
+		if (Physics.Raycast(position,target)){
+			Debug.Log("Hit!");
+		} else {
+			Debug.Log("Miss");
+		}
 		packets.Add(sequence - 1, request);
 		output.Write(request);
 	}

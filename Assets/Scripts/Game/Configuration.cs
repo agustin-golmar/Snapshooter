@@ -84,6 +84,7 @@ public class Configuration : MonoBehaviour {
 	* indique en la configuración.
 	*/
 	protected void Start() {
+		//Physics.IgnoreLayerCollision(8,9,true);
 		Debug.Log("Loading scene...");
 		onExit = false;
 		resources = new List<IClosable>();

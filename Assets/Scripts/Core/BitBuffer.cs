@@ -23,7 +23,7 @@
 		{
 			while (_currentBitCount >= 8)
 			{
-				Debug.Log("Corta en: " + Convert.ToString(_bits, 2));
+				//Debug.Log("Corta en: " + Convert.ToString(_bits, 2));
 				_buffer[_seek++] = (byte) _bits;
 				_length++;
 				_currentBitCount -= 8;
@@ -75,6 +75,16 @@
 			return val * step + min;
 		}
 
+		public void PutDirection(Direction d){
+			PutInt((int)d,0,6);
+		}
+
+		public Direction GetDirection() {
+			int ret = GetInt(0,6);
+			//Debug.Log("Tengo: "+(Direction)ret);
+			return (Direction)ret;
+		}
+
 		private void Flush()
 		{
 			_length = 0;
@@ -98,7 +108,7 @@
 				mask <<= 1;
 				mask++;
 			}
-			Debug.Log("Mask: "+ Convert.ToString(mask,2));
+			//Debug.Log("Mask: "+ Convert.ToString(mask,2));
 			GetByte(bitcount);
 			long ret = _bits & mask;
 			_currentBitCount -= bitcount;
@@ -116,12 +126,12 @@
 				// El cast a (uint), no estaba. Está bien así?
 				_bits |= (uint) _buffer[_seek] << _currentBitCount;
 				
-				Debug.Log("Temp bits: " + Convert.ToString(_bits, 2));
-				Debug.Log("Buffer is: " + Convert.ToString(_buffer[_seek], 2));
+				//Debug.Log("Temp bits: " + Convert.ToString(_bits, 2));
+				//Debug.Log("Buffer is: " + Convert.ToString(_buffer[_seek], 2));
 				_seek++;
 				_currentBitCount += 8;
 			}
-			Debug.Log("Bits is: " + Convert.ToString(_bits, 2));
+			//Debug.Log("Bits is: " + Convert.ToString(_bits, 2));
 
 		}
 		public BitBuffer()
@@ -149,7 +159,7 @@
 			}
 			
 			ret[_length] = (byte)_bits;
-			Debug.Log("Bits: "+Convert.ToString(_bits,2));
+			//Debug.Log("Bits: "+Convert.ToString(_bits,2));
 			Flush();
 			return ret;
 		}

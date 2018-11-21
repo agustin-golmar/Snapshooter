@@ -27,6 +27,7 @@ public class Server : IClosable, IAPI {
 	protected Transform ghostTransform;
 	protected LagSimulator lagSimulator;
 	protected volatile float timestamp;
+	protected Rigidbody rigidbody;
 
 	public Server(Configuration configuration) {
 		config = configuration;
@@ -48,7 +49,13 @@ public class Server : IClosable, IAPI {
 		for (int i = 0; i < config.maxPlayers; ++i) {
 			acks[i] = new SortedDictionary<int, Packet>();
 		}
+		
 		ghost = new GameObject("Server Ghost");
+		//ghost.layer=8;
+		//rigidbody = ghost.AddComponent<Rigidbody>();
+		//rigidbody.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+		//rigidbody.useGravity = false;
+		//ghost.AddComponent<SphereCollider>();
 		ghostTransform = ghost.transform;
 		lagSimulator = new LagSimulator(config);
 		timestamp = 0.0f;
@@ -313,14 +320,19 @@ public class Server : IClosable, IAPI {
 	*/
 	public Packet Move(Packet request) {
 		int id = request.Reset(6).GetInteger();
-		float Δt = request.GetFloat();
-		int directions = request.GetInteger();
+		BitBuffer bb = request.GetBitBuffer();
+		//float Δt = request.GetFloat();
+		float Δt = bb.GetFloat(0,1,0.0001f);
+		//int directions = request.GetInteger();
+		int directions = bb.GetInt(0,10);
+		//Debug.Log("Dirs: " + directions);
 		float delta = Δt * config.playerSpeed;
 		LoadGhostFor(id);
 		for (int k = 0; k < directions; ++k) {
-			switch (request.GetDirection()) {
+			switch (bb.GetDirection()) {
 				case Direction.FORWARD : {
 					ghostTransform.Translate(0, 0, delta);
+					
 					break;
 				}
 				case Direction.STRAFING_LEFT : {
@@ -353,6 +365,12 @@ public class Server : IClosable, IAPI {
 	* Efectúa un disparo con el rifle (usando hit-scan).
 	*/
 	public Packet Shoot(Packet request) {
+		//RaycastHit hit;
+		//int id = request.Reset(6).GetInteger();
+		//Vector3 dir = request.GetVector();
+		//float delta = Δt * config.playerSpeed;
+		//LoadGhostFor(id);
+
 		return GetResponseHeader(request, 0).Build();
 	}
 
