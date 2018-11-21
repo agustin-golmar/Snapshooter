@@ -298,12 +298,16 @@ public class Server : IClosable, IAPI {
 	*/
 	public Packet Move(Packet request) {
 		int id = request.Reset(6).GetInteger();
-		float Δt = request.GetFloat();
-		int directions = request.GetInteger();
+		BitBuffer bb = request.GetBitBuffer();
+		//float Δt = request.GetFloat();
+		float Δt = bb.GetFloat(0,10,0.1f);
+		//int directions = request.GetInteger();
+		int directions = bb.GetInt(0,10);
+		Debug.Log("Dirs: " + directions);
 		float delta = Δt * config.playerSpeed;
 		LoadGhostFor(id);
 		for (int k = 0; k < directions; ++k) {
-			switch (request.GetDirection()) {
+			switch (bb.GetDirection()) {
 				case Direction.FORWARD : {
 					ghostTransform.Translate(0, 0, delta);
 					

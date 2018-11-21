@@ -87,7 +87,7 @@ public class Packet {
 		//position += 4;
 		byte length = GetByte();
 		byte[] buffer = new byte[length];
-		Debug.Log("BUFLEN: " + length);
+		//Debug.Log("BUFLEN: " + length);
 		for (int i = 0; i < length; ++i) {
 			buffer[i] = GetByte();
 		}
@@ -175,9 +175,9 @@ public class Packet {
 			//AddPayload(BitConverter.GetBytes(bb.getData()));
 			//AddPayload(BitConverter.GetBytes(bb.getCount()));
 			byte[] payload = bb.GetPayload();
-			foreach (byte b in payload) {
+			/* foreach (byte b in payload) {
 				Debug.Log("Manda: " + Convert.ToString(b,2));
-			}
+			}*/
 			AddByte((byte)payload.Length);
 			AddPayload(payload);
 			return this;

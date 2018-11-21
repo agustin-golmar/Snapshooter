@@ -215,17 +215,23 @@ public class Client : IClosable {
 	* encarga de aplicar predicción, en caso de que esté habilitada.
 	*/
 	public void Move(List<Direction> directions) {
+		BitBuffer bb = new BitBuffer();
 		float Δt = Time.deltaTime;
 		if (config.usePrediction) {
 			predictor.PredictMove(directions, Δt);
 			predictor.SaveState(sequence);
 		}
-		Packet.Builder builder = GetRequestHeader(PacketType.FLOODING, Endpoint.MOVE, 8 + directions.Count)
-			.AddFloat(Δt)
-			.AddInteger(directions.Count);
+		bb.PutFloat(Δt,0,10,0.1f);
+		Debug.Log("Mando: "+directions.Count);
+		bb.PutInt(directions.Count,0,10);
+		Packet.Builder builder = GetRequestHeader(PacketType.FLOODING, Endpoint.MOVE, 8 + directions.Count);
+			//.AddFloat(Δt)
+			//.AddInteger(directions.Count);
 		foreach (Direction direction in directions) {
-			builder.AddDirection(direction);
+			bb.PutDirection(direction);
+			//builder.AddDirection(direction);
 		}
+		builder.AddBitBuffer(bb);
 		Packet request = builder.Build();
 		packets.Add(sequence - 1, request);
 		output.Write(request);
