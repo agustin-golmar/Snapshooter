@@ -76,11 +76,13 @@
 		}
 
 		public void PutDirection(Direction d){
-			PutInt((int)d,0,5);
+			PutInt((int)d,0,6);
 		}
 
 		public Direction GetDirection() {
-			return (Direction)GetInt(0,5);
+			int ret = GetInt(0,6);
+			//Debug.Log("Tengo: "+(Direction)ret);
+			return (Direction)ret;
 		}
 
 		private void Flush()

@@ -221,13 +221,16 @@ public class Client : IClosable {
 			predictor.PredictMove(directions, Δt);
 			predictor.SaveState(sequence);
 		}
-		bb.PutFloat(Δt,0,10,0.1f);
-		Debug.Log("Mando: "+directions.Count);
+		//Debug.Log("dt: "+Δt);
+		bb.PutFloat(Δt,0,1,0.0001f);
+		//Debug.Log("Mando: "+directions.Count);
 		bb.PutInt(directions.Count,0,10);
 		Packet.Builder builder = GetRequestHeader(PacketType.FLOODING, Endpoint.MOVE, 8 + directions.Count);
 			//.AddFloat(Δt)
 			//.AddInteger(directions.Count);
 		foreach (Direction direction in directions) {
+			//Debug.Log("Dir vale: "+direction);
+			//Debug.Log("Numero: " +(int)direction );
 			bb.PutDirection(direction);
 			//builder.AddDirection(direction);
 		}

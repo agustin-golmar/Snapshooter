@@ -76,7 +76,7 @@ public class Player : MonoBehaviour {
 		// Actualizar vida en HUD usando:
 		// snapshot.lifes[id];
 		Move();
-		//Shoot();
+		Shoot();
 		if (!config.usePrediction) {
 			transform.SetPositionAndRotation(snapshot.positions[id], snapshot.rotations[id]);
 		}

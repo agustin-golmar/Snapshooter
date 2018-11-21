@@ -300,10 +300,10 @@ public class Server : IClosable, IAPI {
 		int id = request.Reset(6).GetInteger();
 		BitBuffer bb = request.GetBitBuffer();
 		//float Δt = request.GetFloat();
-		float Δt = bb.GetFloat(0,10,0.1f);
+		float Δt = bb.GetFloat(0,1,0.0001f);
 		//int directions = request.GetInteger();
 		int directions = bb.GetInt(0,10);
-		Debug.Log("Dirs: " + directions);
+		//Debug.Log("Dirs: " + directions);
 		float delta = Δt * config.playerSpeed;
 		LoadGhostFor(id);
 		for (int k = 0; k < directions; ++k) {
