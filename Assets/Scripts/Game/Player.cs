@@ -65,7 +65,7 @@ public class Player : MonoBehaviour {
 
 	protected void Shoot() {
 		if (Input.GetMouseButtonDown(0))
-			client.Shoot(transform.forward);
+			client.Shoot(transform.position,transform.forward);
 	}
 
 	/**

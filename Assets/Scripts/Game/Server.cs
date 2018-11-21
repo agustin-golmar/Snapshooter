@@ -340,16 +340,11 @@ public class Server : IClosable, IAPI {
 	*/
 	public Packet Shoot(Packet request) {
 		//RaycastHit hit;
-		int id = request.Reset(6).GetInteger();
-		Vector3 dir = request.GetVector();
+		//int id = request.Reset(6).GetInteger();
+		//Vector3 dir = request.GetVector();
 		//float delta = Δt * config.playerSpeed;
-		LoadGhostFor(id);
-		Debug.DrawRay(ghostTransform.position,10*dir,Color.red);
-		if (Physics.Raycast(ghostTransform.position,dir)){
-			Debug.Log("Hit!");
-		} else {
-			Debug.Log("Miss");
-		}
+		//LoadGhostFor(id);
+
 		return GetResponseHeader(request, 0).Build();
 	}
 

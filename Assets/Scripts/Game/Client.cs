@@ -234,10 +234,16 @@ public class Client : IClosable {
 	/**
 	* Efectúa un disparo con el rifle (usando hit-scan). Se envía el target.
 	*/
-	public void Shoot(Vector3 target) {
+	public void Shoot(Vector3 position,Vector3 target) {
 		Packet request = GetRequestHeader(PacketType.FLOODING, Endpoint.SHOOT, 12)
 			.AddVector(target)
 			.Build();
+		Debug.DrawRay(position,10*target,Color.red,5);
+		if (Physics.Raycast(position,target)){
+			Debug.Log("Hit!");
+		} else {
+			Debug.Log("Miss");
+		}
 		packets.Add(sequence - 1, request);
 		output.Write(request);
 	}
