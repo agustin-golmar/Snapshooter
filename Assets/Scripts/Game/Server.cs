@@ -25,6 +25,7 @@ public class Server : IClosable, IAPI {
 	protected SortedDictionary<int, Packet>[] acks;
 	protected GameObject ghost;
 	protected Transform ghostTransform;
+	protected Rigidbody rigidbody;
 
 	public Server(Configuration configuration) {
 		config = configuration;
@@ -46,7 +47,13 @@ public class Server : IClosable, IAPI {
 		for (int i = 0; i < config.maxPlayers; ++i) {
 			acks[i] = new SortedDictionary<int, Packet>();
 		}
+		
 		ghost = new GameObject("Server Ghost");
+		//ghost.layer=8;
+		//rigidbody = ghost.AddComponent<Rigidbody>();
+		//rigidbody.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+		//rigidbody.useGravity = false;
+		//ghost.AddComponent<SphereCollider>();
 		ghostTransform = ghost.transform;
 	}
 
@@ -299,6 +306,7 @@ public class Server : IClosable, IAPI {
 			switch (request.GetDirection()) {
 				case Direction.FORWARD : {
 					ghostTransform.Translate(0, 0, delta);
+					
 					break;
 				}
 				case Direction.STRAFING_LEFT : {
@@ -331,6 +339,17 @@ public class Server : IClosable, IAPI {
 	* Efectúa un disparo con el rifle (usando hit-scan).
 	*/
 	public Packet Shoot(Packet request) {
+		//RaycastHit hit;
+		int id = request.Reset(6).GetInteger();
+		Vector3 dir = request.GetVector();
+		//float delta = Δt * config.playerSpeed;
+		LoadGhostFor(id);
+		Debug.DrawRay(ghostTransform.position,10*dir,Color.red);
+		if (Physics.Raycast(ghostTransform.position,dir)){
+			Debug.Log("Hit!");
+		} else {
+			Debug.Log("Miss");
+		}
 		return GetResponseHeader(request, 0).Build();
 	}
 
