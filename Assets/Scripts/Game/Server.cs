@@ -25,6 +25,8 @@ public class Server : IClosable, IAPI {
 	protected SortedDictionary<int, Packet>[] acks;
 	protected GameObject ghost;
 	protected Transform ghostTransform;
+	protected LagSimulator lagSimulator;
+	protected volatile float timestamp;
 
 	public Server(Configuration configuration) {
 		config = configuration;
@@ -48,6 +50,8 @@ public class Server : IClosable, IAPI {
 		}
 		ghost = new GameObject("Server Ghost");
 		ghostTransform = ghost.transform;
+		lagSimulator = new LagSimulator(config);
+		timestamp = 0.0f;
 	}
 
 	/**
@@ -103,7 +107,11 @@ public class Server : IClosable, IAPI {
 			byte [] payload = local.Receive(anyLink);
 			if (payload != null && config.packetLossRatio <= random.NextDouble()) {
 				Packet packet = new Packet(payload);
-				input.Write(packet);
+				lagSimulator.Write(packet, timestamp);
+			}
+			Packet futurePacket = lagSimulator.Read(timestamp);
+			if (futurePacket != null) {
+				input.Write(futurePacket);
 			}
 		}
 	}
@@ -114,10 +122,22 @@ public class Server : IClosable, IAPI {
 	*/
 	protected void ResponseHandler() {
 		System.Random random = new System.Random();
+		LagSimulator [] lagSimulators = new LagSimulator [config.maxPlayers];
+		Debug.Log("Loading " + lagSimulators.Length + " lag simulators for response.");
+		for (int k = 0; k < lagSimulators.Length; ++k) {
+			lagSimulators[k] = new LagSimulator(config);
+		}
 		while (!config.OnExit()) {
 			for (int id = 0; id < outputs.Count; ++id) {
-				if (config.packetLossRatio <= random.NextDouble()) {
-					local.Send(links[id], outputs[id]);
+				Packet packet = outputs[id].Read();
+				if (packet != null && config.packetLossRatio <= random.NextDouble()) {
+					lagSimulators[id].Write(packet, timestamp);
+				}
+			}
+			for (int id = 0; id < outputs.Count; ++id) {
+				Packet futurePacket = lagSimulators[id].Read(timestamp);
+				if (futurePacket != null) {
+					local.Send(links[id], futurePacket);
 				}
 			}
 		}
@@ -205,15 +225,17 @@ public class Server : IClosable, IAPI {
 	* serán enviados por ResponseHandler.
 	*/
 	public void FrameHandler() {
+		// Actualizar timestamp:
+		timestamp = Time.unscaledTime;
 		// Procesar paquetes reliable:
 		HandleAllRequest(PacketType.EVENT);
 		HandleAllRequest(PacketType.FLOODING);
 		// Procesar snapshot:
-		int currentSnapshot = Mathf.FloorToInt(Time.unscaledTime * config.snapshotsPerSecond);
+		int currentSnapshot = Mathf.FloorToInt(timestamp * config.snapshotsPerSecond);
 		if (lastSnapshot < currentSnapshot) {
 			lastSnapshot = currentSnapshot;
 			snapshot.sequence = currentSnapshot;
-			snapshot.timestamp = Time.unscaledTime;
+			snapshot.timestamp = timestamp;
 			if (snapshot.players == 0) return;
 			Packet packet = snapshot.ToPacket();
 			foreach (Stream output in outputs) {

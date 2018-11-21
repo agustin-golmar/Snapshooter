@@ -329,9 +329,9 @@ MonoBehaviour:
   usePrediction: 1
   "\u0394Position": 0.1
   "\u0394Rotation": 30
-  lag: 0
+  lag: 10
   timeout: 3
-  packetLossRatio: 0.05
+  packetLossRatio: 0.01
   playerSpeed: 5
 --- !u!4 &684639884
 Transform:
