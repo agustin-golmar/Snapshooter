@@ -248,7 +248,7 @@ public class Client : IClosable {
 		Debug.DrawRay(position,10*target,Color.red,5);
 		RaycastHit hit;
 		if (Physics.Raycast(position,target, out hit)){
-			requestBuilder.AddByte((byte)hit.collider.gameObject.GetComponent<Player>().GetID());
+			requestBuilder.AddByte((byte)hit.collider.gameObject.GetComponent<Enemy>().GetID());
 		} else {
 			requestBuilder.AddByte((byte)255);
 		}
