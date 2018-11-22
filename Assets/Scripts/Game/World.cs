@@ -28,12 +28,20 @@ public class World : MonoBehaviour {
 	// Cantidad de granadas actualmente:
 	protected int grenades;
 
+	// Jugador local:
+	protected Player player;
+
+	// Último enemigo creado:
+	protected int lastEnemy;
+
 	protected void Start() {
 		Debug.Log("Loading world...");
 		config = GameObject.Find("Configuration").GetComponent<Configuration>();
 		snapshot = null;
+		player = null;
 		players = 1;
 		grenades = 0;
+		lastEnemy = 0;
 		Debug.Log("World loaded.");
 	}
 
@@ -42,21 +50,39 @@ public class World : MonoBehaviour {
 	* se agreguen o destruyan jugadores o granadas.
 	*/
 	protected void Update() {
-		if (snapshot != null) {
+		if (snapshot != null && player != null) {
 			if (players < snapshot.players) {
+				Debug.Log("Local Player ID = " + player.GetID());
 				Debug.Log("Found new player (old was " + players + "): " + snapshot.players);
-				// Se creó un jugador. Siempre es el último en la lista.
-				Debug.Log("Creating enemy with ID = " + players);
+				Debug.Log("Creating enemy with ID = " + lastEnemy);
 				Debug.Log("  Snapshot: " + snapshot);
 				Debug.Log("  Snapshot lengths: " + snapshot.positions.Length + " | " + snapshot.rotations.Length);
-				Debug.Log("  Position: " + snapshot.positions[players]);
-				Debug.Log("  Rotation: " + snapshot.rotations[players]);
-				Debug.Log("  ID: " + snapshot.ids[players]);
-				Enemy enemy = CreateEnemy(snapshot.positions[players], snapshot.rotations[players]);
-				Debug.Log("  Enemy: " + enemy);
-				enemy.SetID(snapshot.ids[players]);
-				enemy.SetSnapshot(snapshot);
-				++players;
+				Debug.Log("  Position: " + snapshot.positions[lastEnemy]);
+				Debug.Log("  Rotation: " + snapshot.rotations[lastEnemy]);
+				Debug.Log("  ID: " + snapshot.ids[lastEnemy]);
+
+				/*
+				* players = 1 siempre, porque el jugador local ya fue instanciado.
+				* La cantidad de jugadores no es igual a 1 porque había más en la sala.
+				* Empiezo en lastEnemy = 0.
+				* Si lastEnemy es el jugador local, no hago nada. lastEnemy = 1.
+				* Si lastEnemy es diferente del ID local, entonces creo un nuevo enemigo con lastEnemy como ID.
+				* Se incrementa players.
+				*/
+				if (lastEnemy == player.GetID()) {
+					++lastEnemy;
+				}
+				else {
+					CreateEnemy(snapshot.positions[lastEnemy], snapshot.rotations[lastEnemy])
+						.SetID(snapshot.ids[lastEnemy])
+						.SetSnapshot(snapshot);
+					++lastEnemy;
+					++players;
+				}
+				// El primer jugador toma el último
+				// [0]
+				// El segundo
+				// 0 - [1]
 			}
 			else if (snapshot.players < players) {
 				// Se eliminó un jugador.
@@ -108,8 +134,9 @@ public class World : MonoBehaviour {
 	* Instancia un nuevo jugador local (controlado por el usuario).
 	*/
 	public Player CreatePlayer(Vector3 position, Quaternion rotation) {
-		return Create(playerPrefab, position, rotation)
+		player = Create(playerPrefab, position, rotation)
 			.GetComponent<Player>();
+		return player;
 	}
 
 	/**
