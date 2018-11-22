@@ -12,8 +12,7 @@ public class Player : MonoBehaviour {
 	private const string KEY_A = "a";
 	private const string KEY_S = "s";
 	private const string KEY_D = "d";
-	private const string KEY_Q = "q";
-	private const string KEY_E = "e";
+	private const string KEY_G = "g";
 
 	protected Configuration config;
 	protected Snapshot snapshot;
@@ -77,6 +76,9 @@ public class Player : MonoBehaviour {
 		// snapshot.lifes[id];
 		Move();
 		Shoot();
+		if (Input.GetKey(KEY_G)) {
+			client.Frag(Vector3.zero);
+		}
 		if (!config.usePrediction) {
 			transform.SetPositionAndRotation(snapshot.positions[id], snapshot.rotations[id]);
 		}

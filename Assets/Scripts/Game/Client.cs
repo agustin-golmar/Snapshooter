@@ -259,11 +259,11 @@ public class Client : IClosable {
 
 	/**
 	* Lanza una granada cuyo daño infligido opera en área (AoE). Se envía la
-	* dirección de la fuerza de lanzamiento.
+	* dirección de la fuerza de lanzamiento. Por ahora, esa fuerza no se
+	* utiliza.
 	*/
 	public void Frag(Vector3 force) {
-		Packet request = GetRequestHeader(PacketType.FLOODING, Endpoint.FRAG, 12)
-			.AddVector(force)
+		Packet request = GetRequestHeader(PacketType.FLOODING, Endpoint.FRAG, 0)
 			.Build();
 		packets.Add(sequence - 1, request);
 		output.Write(request);

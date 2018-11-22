@@ -14,8 +14,16 @@ using UnityEngine;
 	*	-La vida de cada jugador (de 0 a 100).
 	*	-Un vector de posición por cada jugador.
 	*	-Un quaternion de rotación por cada jugador.
+	*	-La cantidad de granadas en vuelo.
+	*	-La posición de cada granada.
+	*	-La orientación de cada granada.
 	*
-	* Luego debería contener las entidades físicas (granadas).
+	* La cantidad de granadas no puede superar la cantidad de jugadores. Cuando
+	* se lanza una granada, no se puede lanzar otra hasta que la primera haya
+	* detonado. Se debe verificar el campo 'gFuses' para determinar si la
+	* granada ha sido utilizada, ya que este campo determina cuanto tiempo
+	* queda antes de explotar. Si es negativo, entonces la granada está
+	* desactivada (no fue lanzada).
 	*/
 
 public class Snapshot {
@@ -34,6 +42,14 @@ public class Snapshot {
 	public Vector3 [] positions;
 	public Quaternion [] rotations;
 
+	// Cantidad de granadas en vuelo:
+	public int grenades;
+
+	// Propiedades de cada granada:
+	public float [] gFuses;
+	public Vector3 [] gPositions;
+	public Quaternion [] gRotations;
+
 	// Otros datos...
 
 	/**
@@ -45,6 +61,9 @@ public class Snapshot {
 		lifes = new int [maxPlayers];
 		positions = new Vector3 [maxPlayers];
 		rotations = new Quaternion [maxPlayers];
+		gFuses = new float [maxPlayers];
+		gPositions = new Vector3 [maxPlayers];
+		gRotations = new Quaternion [maxPlayers];
 		return this;
 	}
 
@@ -69,6 +88,12 @@ public class Snapshot {
 			positions[k] = packet.GetVector();
 			rotations[k] = packet.GetQuaternion();
 		}
+		grenades = packet.GetInteger();
+		for (int k = 0; k < grenades; ++k) {
+			gFuses[k] = packet.GetFloat();
+			gPositions[k] = packet.GetVector();
+			gRotations[k] = packet.GetQuaternion();
+		}
 		// Otros datos...
 		packet.Reset();
 	}
@@ -92,6 +117,12 @@ public class Snapshot {
 			positions[k] = Vector3.Lerp(from.positions[k], to.positions[k], Δn);
 			rotations[k] = Quaternion.Slerp(from.rotations[k], to.rotations[k], Δn);
 		}
+		grenades = Math.Min(from.grenades, to.grenades);
+		for (int k = 0; k < players; ++k) {
+			gFuses[k] = Mathf.Lerp(from.gFuses[k], to.gFuses[k], Δn);
+			gPositions[k] = Vector3.Lerp(from.gPositions[k], to.gPositions[k], Δn);
+			gRotations[k] = Quaternion.Slerp(from.gRotations[k], to.gRotations[k], Δn);
+		}
 		// Otros datos...
 		return this;
 	}
@@ -100,7 +131,7 @@ public class Snapshot {
 	* Devuelve la representación en forma de paquete de bytes de esta snapshot.
 	*/
 	public Packet ToPacket() {
-		Packet.Builder builder = new Packet.Builder(13 + 40 * players)
+		Packet.Builder builder = new Packet.Builder(17 + 40 * players + 32 * grenades)
 			.AddPacketType(PacketType.SNAPSHOT)
 			.AddInteger(sequence)
 			.AddFloat(timestamp)
@@ -111,6 +142,12 @@ public class Snapshot {
 				.AddInteger(lifes[k])
 				.AddVector(positions[k])
 				.AddQuaternion(rotations[k]);
+		}
+		builder.AddInteger(grenades);
+		for (int k = 0; k < grenades; ++k) {
+			builder.AddFloat(gFuses[k])
+				.AddVector(gPositions[k])
+				.AddQuaternion(gRotations[k]);
 		}
 		// Otros datos...
 		return builder.Build();
@@ -157,6 +194,26 @@ public class Snapshot {
 
 	public Snapshot Rotation(int index, Quaternion rotation) {
 		rotations[index] = rotation;
+		return this;
+	}
+
+	public Snapshot Grenades(int grenades) {
+		this.grenades = grenades;
+		return this;
+	}
+
+	public Snapshot Fuse(int index, float fuse) {
+		gFuses[index] = fuse;
+		return this;
+	}
+
+	public Snapshot GrenadePosition(int index, Vector3 position) {
+		gPositions[index] = position;
+		return this;
+	}
+
+	public Snapshot GrenadeRotation(int index, Quaternion rotation) {
+		gRotations[index] = rotation;
 		return this;
 	}
 }

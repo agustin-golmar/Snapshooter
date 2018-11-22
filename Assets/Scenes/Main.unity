@@ -206,10 +206,10 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 550730924}
+  - component: {fileID: 550730925}
   - component: {fileID: 550730923}
   - component: {fileID: 550730922}
   - component: {fileID: 550730921}
-  - component: {fileID: 550730925}
   - component: {fileID: 550730926}
   m_Layer: 0
   m_Name: World
@@ -300,7 +300,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   playerPrefab: {fileID: 1593502636087912, guid: 9e5db9874d6fc4544b2814292b395e01,
     type: 2}
-  enemyPrefab: {fileID: 1054251628752520, guid: a4f2b574241394742b7beaf57a42c447,
+  enemyPrefab: {fileID: 1903498495682894, guid: a4f2b574241394742b7beaf57a42c447,
     type: 2}
   grenadePrefab: {fileID: 1479324646123764, guid: 7b777d2add421c845a16bdb78b8d72d5,
     type: 2}
@@ -371,7 +371,7 @@ MonoBehaviour:
   serverListeningPort: 10000
   clientAddress: 127.0.0.1
   clientListeningPort: 10001
-  maxPlayers: 8
+  maxPlayers: 6
   maxPacketSize: 128
   maxPacketsInQueue: 100
   serverReceiveTimeout: 10
@@ -380,13 +380,15 @@ MonoBehaviour:
   clientSendTimeout: 20
   snapshotsPerSecond: 10
   slidingWindowSize: 2
-  usePrediction: 0
+  usePrediction: 1
   "\u0394Position": 0.1
   "\u0394Rotation": 30
   lag: 10
   timeout: 3
   packetLossRatio: 0.01
   playerSpeed: 5
+  grenadeFuseTime: 4
+  grenadeRadius: 3.5
 --- !u!4 &684639884
 Transform:
   m_ObjectHideFlags: 0

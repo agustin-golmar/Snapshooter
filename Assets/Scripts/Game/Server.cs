@@ -15,23 +15,25 @@ public class Server : IClosable, IAPI {
 
 	protected Configuration config;
 	protected Demultiplexer input;
+	protected Dictionary<string, Packet> joins;
+	protected GameObject ghost;
+	protected LagSimulator lagSimulator;
 	protected Link local;
 	protected List<Link> links;
 	protected List<Stream> outputs;
 	protected Snapshot snapshot;
+	protected SortedDictionary<int, Packet> [] acks;
 	protected Threading threading;
-	protected float lastSnapshot;
-	protected Dictionary<string, Packet> joins;
-	protected SortedDictionary<int, Packet>[] acks;
-	protected GameObject ghost;
 	protected Transform ghostTransform;
-	protected LagSimulator lagSimulator;
+	protected float lastSnapshot;
 	protected volatile float timestamp;
-	protected Rigidbody rigidbody;
 
 	public Server(Configuration configuration) {
 		config = configuration;
 		input = new Demultiplexer(config.maxPacketsInQueue);
+		joins = new Dictionary<string, Packet>();
+		ghost = new GameObject("Server Ghost");
+		lagSimulator = new LagSimulator(config);
 		local = new Link.Builder()
 			.Bind(true)
 			.IP("0.0.0.0")
@@ -42,22 +44,13 @@ public class Server : IClosable, IAPI {
 		links = new List<Link>();
 		outputs = new List<Stream>();
 		snapshot = config.GetServerSnapshot();
-		threading = new Threading();
-		lastSnapshot = 0.0f;
-		joins = new Dictionary<string, Packet>();
 		acks = new SortedDictionary<int, Packet>[config.maxPlayers];
 		for (int i = 0; i < config.maxPlayers; ++i) {
 			acks[i] = new SortedDictionary<int, Packet>();
 		}
-		
-		ghost = new GameObject("Server Ghost");
-		//ghost.layer=8;
-		//rigidbody = ghost.AddComponent<Rigidbody>();
-		//rigidbody.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
-		//rigidbody.useGravity = false;
-		//ghost.AddComponent<SphereCollider>();
+		threading = new Threading();
 		ghostTransform = ghost.transform;
-		lagSimulator = new LagSimulator(config);
+		lastSnapshot = 0.0f;
 		timestamp = 0.0f;
 	}
 
@@ -332,7 +325,6 @@ public class Server : IClosable, IAPI {
 			switch (bb.GetDirection()) {
 				case Direction.FORWARD : {
 					ghostTransform.Translate(0, 0, delta);
-					
 					break;
 				}
 				case Direction.STRAFING_LEFT : {
@@ -365,12 +357,6 @@ public class Server : IClosable, IAPI {
 	* Efectúa un disparo con el rifle (usando hit-scan).
 	*/
 	public Packet Shoot(Packet request) {
-		//RaycastHit hit;
-		//int id = request.Reset(6).GetInteger();
-		//Vector3 dir = request.GetVector();
-		//float delta = Δt * config.playerSpeed;
-		//LoadGhostFor(id);
-
 		return GetResponseHeader(request, 0).Build();
 	}
 
@@ -378,6 +364,12 @@ public class Server : IClosable, IAPI {
 	* Lanza una granada cuyo daño es en área (AoE).
 	*/
 	public Packet Frag(Packet request) {
+		Debug.Log("Grenade throwed...");
+		/*
+		* Lanzar granada.
+		* La granada rebota mientras fuse-time sea positivo.
+		* La granada explota y hace daño dentro de cierto radio esférico, cuando fuse-time < 0.
+		*/
 		return GetResponseHeader(request, 0).Build();
 	}
 }

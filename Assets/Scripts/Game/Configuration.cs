@@ -79,6 +79,12 @@ public class Configuration : MonoBehaviour {
 	// Velocidad de los jugadores en [m/s]:
 	public float playerSpeed;
 
+	// Time de detonación de una granada en [s]:
+	public float grenadeFuseTime;
+
+	// Radio de efecto de la detonación de una granada en [m]:
+	public float grenadeRadius;
+
 	/**
 	* Carga la escena compelta, e instancia un servidor y/o cliente según se
 	* indique en la configuración.

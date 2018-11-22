@@ -26,14 +26,14 @@ public class World : MonoBehaviour {
 	protected int players;
 
 	// Cantidad de granadas actualmente:
-	protected int frags;
+	protected int grenades;
 
 	protected void Start() {
 		Debug.Log("Loading world...");
 		config = GameObject.Find("Configuration").GetComponent<Configuration>();
 		snapshot = null;
 		players = 1;
-		frags = 0;
+		grenades = 0;
 		Debug.Log("World loaded.");
 	}
 
@@ -46,10 +46,17 @@ public class World : MonoBehaviour {
 			if (players < snapshot.players) {
 				Debug.Log("Found new player (old was " + players + "): " + snapshot.players);
 				// Se creó un jugador. Siempre es el último en la lista.
+				Debug.Log("Creating enemy with ID = " + players);
+				Debug.Log("  Snapshot: " + snapshot);
+				Debug.Log("  Snapshot lengths: " + snapshot.positions.Length + " | " + snapshot.rotations.Length);
+				Debug.Log("  Position: " + snapshot.positions[players]);
+				Debug.Log("  Rotation: " + snapshot.rotations[players]);
+				Debug.Log("  ID: " + snapshot.ids[players]);
+				Enemy enemy = CreateEnemy(snapshot.positions[players], snapshot.rotations[players]);
+				Debug.Log("  Enemy: " + enemy);
+				enemy.SetID(snapshot.ids[players]);
+				enemy.SetSnapshot(snapshot);
 				++players;
-				CreateEnemy(snapshot.positions[players], snapshot.rotations[players])
-					.SetID(snapshot.ids[players])
-					.SetSnapshot(snapshot);
 			}
 			else if (snapshot.players < players) {
 				// Se eliminó un jugador.
@@ -58,6 +65,21 @@ public class World : MonoBehaviour {
 			else {
 				// La cantidad de jugadores no cambió. No se hace nada.
 			}
+			/*if (grenades < snapshot.grenades) {
+				Debug.Log("Found new grenade (old was " + grenades + "): " + snapshot.grenades);
+				// Se creó una granada. El parámetro 'fuse' debe ser positivo.
+				++grenades;
+				CreateGrenade(snapshot.gPositions[players], snapshot.gRotations[players])
+					.SetID(snapshot.ids[players])
+					.SetSnapshot(snapshot);
+			}
+			else if (snapshot.grenades < grenades) {
+				// Se eliminó un jugador.
+				// No debería pasar nunca porque no hay un evento LEAVE.
+			}
+			else {
+				// La cantidad de jugadores no cambió. No se hace nada.
+			}*/
 		}
 	}
 
@@ -79,7 +101,7 @@ public class World : MonoBehaviour {
 	* o rotación específica.
 	*/
 	public GameObject Create(GameObject prefab, Vector3 position, Quaternion rotation) {
-		return Instantiate(playerPrefab, position, rotation);
+		return Instantiate(prefab, position, rotation);
 	}
 
 	/**
@@ -95,14 +117,14 @@ public class World : MonoBehaviour {
 	*/
 	public Enemy CreateEnemy(Vector3 position, Quaternion rotation) {
 		return Create(enemyPrefab, position, rotation)
-			.GetComponent<Enemy>();
+				.GetComponent<Enemy>();
 	}
 
 	/**
 	* Crea una granada (es controlada por el servidor).
 	*/
-	public Grenade CreateGrenade(Vector3 position) {
-		return Create(grenadePrefab, position, Quaternion.identity)
+	public Grenade CreateGrenade(Vector3 position, Quaternion rotation) {
+		return Create(grenadePrefab, position, rotation)
 			.GetComponent<Grenade>();
 	}
 }

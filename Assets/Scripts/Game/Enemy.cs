@@ -12,6 +12,7 @@ public class Enemy : MonoBehaviour {
 	protected int id;
 
 	protected void Start() {
+		Debug.Log("Enemy created (id = " + id + ").");
 	}
 
 	protected void Update() {
