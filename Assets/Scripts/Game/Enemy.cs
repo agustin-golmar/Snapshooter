@@ -27,6 +27,9 @@ public class Enemy : MonoBehaviour {
 		this.id = id;
 		return this;
 	}
+	public int GetID() {
+		return id;
+	}
 
 	public Enemy SetSnapshot(Snapshot snapshot) {
 		this.snapshot = snapshot;

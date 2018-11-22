@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 0}
-  m_IndirectSpecularColor: {r: 0.44824505, g: 0.49827188, b: 0.57558143, a: 1}
+  m_IndirectSpecularColor: {r: 0.4482448, g: 0.4982714, b: 0.575581, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -179,25 +179,6 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 3
   m_LocalEulerAnglesHint: {x: 45, y: 0, z: 0}
---- !u!1 &451893851 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 100000, guid: 928d64207c74913499e4eabd183c7ff7,
-    type: 3}
-  m_PrefabInternal: {fileID: 1234325714}
---- !u!64 &451893852
-MeshCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInternal: {fileID: 0}
-  m_GameObject: {fileID: 451893851}
-  m_Material: {fileID: 0}
-  m_IsTrigger: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Convex: 1
-  m_CookingOptions: 14
-  m_SkinWidth: 0.01
-  m_Mesh: {fileID: 4300000, guid: 928d64207c74913499e4eabd183c7ff7, type: 3}
 --- !u!1 &550730920
 GameObject:
   m_ObjectHideFlags: 0
@@ -319,25 +300,6 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 0
   m_CollisionDetection: 0
---- !u!1 &584662308 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 100000, guid: 928d64207c74913499e4eabd183c7ff7,
-    type: 3}
-  m_PrefabInternal: {fileID: 1837155328}
---- !u!64 &584662309
-MeshCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInternal: {fileID: 0}
-  m_GameObject: {fileID: 584662308}
-  m_Material: {fileID: 0}
-  m_IsTrigger: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Convex: 1
-  m_CookingOptions: 14
-  m_SkinWidth: 0.01
-  m_Mesh: {fileID: 4300000, guid: 928d64207c74913499e4eabd183c7ff7, type: 3}
 --- !u!1 &684639882
 GameObject:
   m_ObjectHideFlags: 0

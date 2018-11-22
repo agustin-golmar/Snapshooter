@@ -357,7 +357,18 @@ public class Server : IClosable, IAPI {
 	* Efectúa un disparo con el rifle (usando hit-scan).
 	*/
 	public Packet Shoot(Packet request) {
-		return GetResponseHeader(request, 0).Build();
+		//RaycastHit hit;
+		byte hit_id = request.Reset(10).GetByte();
+		if (hit_id!=255) {
+			int id = (int)hit_id;
+			snapshot.lifes[id]--;
+		}
+		//Vector3 dir = request.GetVector();
+		//float delta = Δt * config.playerSpeed;
+		//LoadGhostFor(id);
+
+
+		return GetResponseHeader(request.Reset(), 0).Build();
 	}
 
 	/**
