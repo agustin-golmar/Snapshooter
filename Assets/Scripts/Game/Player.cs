@@ -19,6 +19,7 @@ public class Player : MonoBehaviour {
 	protected Snapshot snapshot;
 	protected Client client;
 	protected int id;
+	protected int life;
 	protected List<Direction> directions;
 
 	/**
@@ -35,6 +36,7 @@ public class Player : MonoBehaviour {
 	*/
 	protected void Start() {
 		directions = new List<Direction>(6);
+		life=100;
 	}
 
 	/**
@@ -79,6 +81,11 @@ public class Player : MonoBehaviour {
 		Shoot();
 		if (!config.usePrediction) {
 			transform.SetPositionAndRotation(snapshot.positions[id], snapshot.rotations[id]);
+		}
+		int newl = snapshot.lifes[id];
+		if (life!=newl){
+			life=newl;
+			Debug.Log("Vida = "+newl);
 		}
 	}
 

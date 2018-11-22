@@ -366,12 +366,17 @@ public class Server : IClosable, IAPI {
 	*/
 	public Packet Shoot(Packet request) {
 		//RaycastHit hit;
-		//int id = request.Reset(6).GetInteger();
+		byte hit_id = request.Reset(10).GetByte();
+		if (hit_id!=255) {
+			int id = (int)hit_id;
+			snapshot.lifes[id]--;
+		}
 		//Vector3 dir = request.GetVector();
 		//float delta = Δt * config.playerSpeed;
 		//LoadGhostFor(id);
 
-		return GetResponseHeader(request, 0).Build();
+
+		return GetResponseHeader(request.Reset(), 0).Build();
 	}
 
 	/**
