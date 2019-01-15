@@ -26,6 +26,7 @@ public class Client : IClosable {
 	protected float lastTime;
 	protected Player player;
 	protected Predictor predictor;
+	protected World world;
 
 	public Client(Configuration configuration) {
 		config = configuration;
@@ -60,6 +61,9 @@ public class Client : IClosable {
 		timeout = config.timeout;
 		player = null;
 		predictor = null;
+		world = GameObject.Find("World")
+			.GetComponent<World>()
+			.LoadSnapshot(snapshot);
 	}
 
 	/**
@@ -117,10 +121,7 @@ public class Client : IClosable {
 			Quaternion rotation = response.GetQuaternion();
 			response.Reset();
 			// Crear el jugador y el predictor.
-			player = GameObject.Find("World")
-				.GetComponent<World>()
-				.LoadSnapshot(snapshot)
-				.CreatePlayer(respawn, rotation)
+			player = world.CreatePlayer(respawn, rotation)
 				.SetClient(this)
 				.SetID(id)
 				.SetSnapshot(snapshot);
@@ -221,18 +222,11 @@ public class Client : IClosable {
 			predictor.PredictMove(directions, Δt);
 			predictor.SaveState(sequence);
 		}
-		//Debug.Log("dt: "+Δt);
-		bb.PutFloat(Δt,0,1,0.0001f);
-		//Debug.Log("Mando: "+directions.Count);
-		bb.PutInt(directions.Count,0,10);
+		bb.PutFloat(Δt, 0, 1, 0.0001f);
+		bb.PutInt(directions.Count, 0, 10);
 		Packet.Builder builder = GetRequestHeader(PacketType.FLOODING, Endpoint.MOVE, 8 + directions.Count);
-			//.AddFloat(Δt)
-			//.AddInteger(directions.Count);
 		foreach (Direction direction in directions) {
-			//Debug.Log("Dir vale: "+direction);
-			//Debug.Log("Numero: " +(int)direction );
 			bb.PutDirection(direction);
-			//builder.AddDirection(direction);
 		}
 		builder.AddBitBuffer(bb);
 		Packet request = builder.Build();
@@ -243,14 +237,14 @@ public class Client : IClosable {
 	/**
 	* Efectúa un disparo con el rifle (usando hit-scan). Se envía el target.
 	*/
-	public void Shoot(Vector3 position,Vector3 target) {
+	public void Shoot(Vector3 position, Vector3 target) {
 		Packet.Builder requestBuilder = GetRequestHeader(PacketType.FLOODING, Endpoint.SHOOT, 1);
-		Debug.DrawRay(position,10*target,Color.red,5);
-		RaycastHit hit;
-		if (Physics.Raycast(position,target, out hit)){
-			requestBuilder.AddByte((byte)hit.collider.gameObject.GetComponent<Enemy>().GetID());
-		} else {
-			requestBuilder.AddByte((byte)255);
+		Debug.DrawRay(position, 10 * target, Color.red, 5);
+		if (Physics.Raycast(position, target, out RaycastHit hit)) {
+			requestBuilder.AddByte((byte) hit.collider.gameObject.GetComponent<Enemy>().GetID());
+		}
+		else {
+			requestBuilder.AddByte((byte) 255);
 		}
 		Packet request = requestBuilder.Build();
 		packets.Add(sequence - 1, request);
@@ -260,7 +254,7 @@ public class Client : IClosable {
 	/**
 	* Lanza una granada cuyo daño infligido opera en área (AoE). Se envía la
 	* dirección de la fuerza de lanzamiento. Por ahora, esa fuerza no se
-	* utiliza.
+	* utiliza (ni se envía).
 	*/
 	public void Frag(Vector3 force) {
 		Packet request = GetRequestHeader(PacketType.FLOODING, Endpoint.FRAG, 0)

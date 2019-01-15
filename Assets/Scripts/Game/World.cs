@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System.Collections.Generic;
+using UnityEngine;
 
 	/**
 	* Se encarga de cargar todo el escenario y los jugadores, según el estado
@@ -13,8 +14,9 @@ public class World : MonoBehaviour {
 	// Prefab de un enemigo:
 	public GameObject enemyPrefab;
 
-	// Prefab de una granada:
+	// Prefab de una granada y su sombra:
 	public GameObject grenadePrefab;
+	public GameObject shallowGrenadePrefab;
 
 	// Configuración global:
 	protected Configuration config;
@@ -25,14 +27,14 @@ public class World : MonoBehaviour {
 	// Cantidad de jugadores actualmente:
 	protected int players;
 
-	// Cantidad de granadas actualmente:
-	protected int grenades;
-
 	// Jugador local:
 	protected Player player;
 
 	// Último enemigo creado:
 	protected int lastEnemy;
+
+	// Granadas lanzadas:
+	protected HashSet<int> grenades = new HashSet<int>();
 
 	protected void Start() {
 		Debug.Log("Loading world...");
@@ -40,7 +42,6 @@ public class World : MonoBehaviour {
 		snapshot = null;
 		player = null;
 		players = 1;
-		grenades = 0;
 		lastEnemy = 0;
 		Debug.Log("World loaded.");
 	}
@@ -52,23 +53,6 @@ public class World : MonoBehaviour {
 	protected void Update() {
 		if (snapshot != null && player != null) {
 			if (players < snapshot.players) {
-				Debug.Log("Local Player ID = " + player.GetID());
-				Debug.Log("Found new player (old was " + players + "): " + snapshot.players);
-				Debug.Log("Creating enemy with ID = " + lastEnemy);
-				Debug.Log("  Snapshot: " + snapshot);
-				Debug.Log("  Snapshot lengths: " + snapshot.positions.Length + " | " + snapshot.rotations.Length);
-				Debug.Log("  Position: " + snapshot.positions[lastEnemy]);
-				Debug.Log("  Rotation: " + snapshot.rotations[lastEnemy]);
-				Debug.Log("  ID: " + snapshot.ids[lastEnemy]);
-
-				/*
-				* players = 1 siempre, porque el jugador local ya fue instanciado.
-				* La cantidad de jugadores no es igual a 1 porque había más en la sala.
-				* Empiezo en lastEnemy = 0.
-				* Si lastEnemy es el jugador local, no hago nada. lastEnemy = 1.
-				* Si lastEnemy es diferente del ID local, entonces creo un nuevo enemigo con lastEnemy como ID.
-				* Se incrementa players.
-				*/
 				if (lastEnemy == player.GetID()) {
 					++lastEnemy;
 				}
@@ -79,10 +63,6 @@ public class World : MonoBehaviour {
 					++lastEnemy;
 					++players;
 				}
-				// El primer jugador toma el último
-				// [0]
-				// El segundo
-				// 0 - [1]
 			}
 			else if (snapshot.players < players) {
 				// Se eliminó un jugador.
@@ -91,21 +71,20 @@ public class World : MonoBehaviour {
 			else {
 				// La cantidad de jugadores no cambió. No se hace nada.
 			}
-			/*if (grenades < snapshot.grenades) {
-				Debug.Log("Found new grenade (old was " + grenades + "): " + snapshot.grenades);
-				// Se creó una granada. El parámetro 'fuse' debe ser positivo.
-				++grenades;
-				CreateGrenade(snapshot.gPositions[players], snapshot.gRotations[players])
-					.SetID(snapshot.ids[players])
-					.SetSnapshot(snapshot);
+			// Si no es server, crear granadas nuevas:
+			if (!config.isServer) {
+				for (int k = 0; k < snapshot.players; ++k) {
+					if (0 < snapshot.gFuses[k] && !grenades.Contains(k)) {
+						grenades.Add(k);
+						CreateShallowGrenade(snapshot.positions[k], snapshot.rotations[k])
+							.SetSnapshot(snapshot)
+							.SetID(k);
+					}
+					if (snapshot.gFuses[k] <= 0) {
+						grenades.Remove(k);
+					}
+				}
 			}
-			else if (snapshot.grenades < grenades) {
-				// Se eliminó un jugador.
-				// No debería pasar nunca porque no hay un evento LEAVE.
-			}
-			else {
-				// La cantidad de jugadores no cambió. No se hace nada.
-			}*/
 		}
 	}
 
@@ -153,5 +132,13 @@ public class World : MonoBehaviour {
 	public Grenade CreateGrenade(Vector3 position, Quaternion rotation) {
 		return Create(grenadePrefab, position, rotation)
 			.GetComponent<Grenade>();
+	}
+
+	/**
+	* Crea una granada superficial (replica el estado del servidor).
+	*/
+	public ShallowGrenade CreateShallowGrenade(Vector3 position, Quaternion rotation) {
+		return Create(shallowGrenadePrefab, position, rotation)
+			.GetComponent<ShallowGrenade>();
 	}
 }

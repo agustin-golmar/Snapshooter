@@ -10,9 +10,6 @@ public class Grenade : MonoBehaviour {
 	protected Snapshot snapshot;
 	protected int id;
 
-	protected float countdown;
-	protected bool hasExploded;
-
 	protected void Awake() {
 		config = GameObject
 			.Find("Configuration")
@@ -20,29 +17,47 @@ public class Grenade : MonoBehaviour {
 	}
 
 	protected void Start() {
-		countdown = config.grenadeFuseTime;
-		hasExploded = false;
+		transform.GetChild(0)
+			.localScale = (config.grenadeRadius / transform.localScale.x) * Vector3.one;
 	}
 
 	protected void Update() {
-		countdown = snapshot.gFuses[id];
-		transform.SetPositionAndRotation(snapshot.gPositions[id], snapshot.gRotations[id]);
-		if (countdown <= 0 && !hasExploded) {
-			// Explotar...
-			// Obtener vecinos
-			Collider [] nearbyObjects = Physics.OverlapSphere(transform.position, config.grenadeRadius);
-			foreach (Collider collider in nearbyObjects) {
-				Enemy enemy = collider.GetComponent<Enemy>();
-				if (enemy != null) {
-					// Es un jugador válido...
-					// Inferir daño
-					// Es mejor computar diferencias entre centros contra todos los jugadores.
-					// No es escalable, pero es simple y rápido.
+		snapshot.gPositions[id] = transform.position;
+		snapshot.gRotations[id] = transform.rotation;
+		snapshot.gFuses[id] -= Time.unscaledDeltaTime;
+		if (snapshot.gFuses[id] <= 0) {
+			snapshot.gFuses[id] = -1;
+			for (int k = 0; k < snapshot.players; ++k) {
+				if (Vector3.Distance(snapshot.positions[k], snapshot.gPositions[id]) < config.grenadeRadius) {
+					Debug.Log("The grenade explosion hit player with ID = " + k);
+					snapshot.lifes[k] -= config.grenadeDamage;
 				}
 			}
-			// Eliminar granada
 			Destroy(gameObject);
-			hasExploded = true;
 		}
+	}
+
+	/** **********************************************************************
+	******************************* PUBLIC API ********************************
+	 *********************************************************************** */
+
+	public Grenade SetID(int id) {
+		this.id = id;
+		return this;
+	}
+
+	public Grenade SetSnapshot(Snapshot snapshot) {
+		this.snapshot = snapshot;
+		return this;
+	}
+
+	/**
+	* Lanza una granada en la dirección en la cual está orientada, con una
+	* fuerza impulsiva inicial.
+	*/
+	public Grenade Throw() {
+		Rigidbody body = GetComponent<Rigidbody>();
+		body.AddForce(2.0f * (transform.forward + transform.up), ForceMode.Impulse);
+		return this;
 	}
 }

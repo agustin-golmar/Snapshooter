@@ -25,6 +25,7 @@ public class Server : IClosable, IAPI {
 	protected SortedDictionary<int, Packet> [] acks;
 	protected Threading threading;
 	protected Transform ghostTransform;
+	protected World world;
 	protected float lastSnapshot;
 	protected volatile float timestamp;
 
@@ -50,6 +51,9 @@ public class Server : IClosable, IAPI {
 		}
 		threading = new Threading();
 		ghostTransform = ghost.transform;
+		world = GameObject.Find("World")
+			.GetComponent<World>()
+			.LoadSnapshot(snapshot);
 		lastSnapshot = 0.0f;
 		timestamp = 0.0f;
 	}
@@ -291,9 +295,12 @@ public class Server : IClosable, IAPI {
 			// Actualizar snapshot global:
 			++snapshot.players;
 			snapshot.ID(index, id)
-				.Life(index, 100)
+				.Life(index, config.playerLife)
 				.Position(index, GetRespawn(id))
-				.Rotation(index, Quaternion.identity);
+				.Rotation(index, Quaternion.identity)
+				.Fuse(index, -1)
+				.GrenadePosition(index, Vector3.zero)
+				.GrenadeRotation(index, Quaternion.identity);
 			// Agregar el nuevo ID al response y enviar:
 			Packet response = GetResponseHeader(request, 32)
 					.AddInteger(id)
@@ -314,11 +321,8 @@ public class Server : IClosable, IAPI {
 	public Packet Move(Packet request) {
 		int id = request.Reset(6).GetInteger();
 		BitBuffer bb = request.GetBitBuffer();
-		//float Δt = request.GetFloat();
-		float Δt = bb.GetFloat(0,1,0.0001f);
-		//int directions = request.GetInteger();
-		int directions = bb.GetInt(0,10);
-		//Debug.Log("Dirs: " + directions);
+		float Δt = bb.GetFloat(0, 1, 0.0001f);
+		int directions = bb.GetInt(0, 10);
 		float delta = Δt * config.playerSpeed;
 		LoadGhostFor(id);
 		for (int k = 0; k < directions; ++k) {
@@ -357,17 +361,11 @@ public class Server : IClosable, IAPI {
 	* Efectúa un disparo con el rifle (usando hit-scan).
 	*/
 	public Packet Shoot(Packet request) {
-		//RaycastHit hit;
 		byte hit_id = request.Reset(10).GetByte();
-		if (hit_id!=255) {
-			int id = (int)hit_id;
+		if (hit_id != 255) {
+			int id = (int) hit_id;
 			snapshot.lifes[id]--;
 		}
-		//Vector3 dir = request.GetVector();
-		//float delta = Δt * config.playerSpeed;
-		//LoadGhostFor(id);
-
-
 		return GetResponseHeader(request.Reset(), 0).Build();
 	}
 
@@ -375,12 +373,14 @@ public class Server : IClosable, IAPI {
 	* Lanza una granada cuyo daño es en área (AoE).
 	*/
 	public Packet Frag(Packet request) {
-		Debug.Log("Grenade throwed...");
-		/*
-		* Lanzar granada.
-		* La granada rebota mientras fuse-time sea positivo.
-		* La granada explota y hace daño dentro de cierto radio esférico, cuando fuse-time < 0.
-		*/
-		return GetResponseHeader(request, 0).Build();
+		Debug.Log("Frag requested...");
+		int id = request.Reset(6).GetInteger();
+		snapshot.Fuse(id, config.grenadeFuseTime);
+		world.CreateGrenade(snapshot.positions[id], snapshot.rotations[id])
+			.SetID(id)
+			.SetSnapshot(snapshot)
+			.Throw();
+		Debug.Log("Grenade created on server for ID = " + id);
+		return GetResponseHeader(request.Reset(), 0).Build();
 	}
 }

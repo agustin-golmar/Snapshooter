@@ -35,7 +35,7 @@ public class Player : MonoBehaviour {
 	*/
 	protected void Start() {
 		directions = new List<Direction>(6);
-		life=100;
+		life = config.playerLife;
 	}
 
 	/**
@@ -74,20 +74,25 @@ public class Player : MonoBehaviour {
 	* al activar predicción, o desde la snapshot global, en caso contrario.
 	*/
 	protected void Update() {
-		// Actualizar vida en HUD usando:
-		// snapshot.lifes[id];
 		Move();
 		Shoot();
-		if (Input.GetKey(KEY_G)) {
-			client.Frag(Vector3.zero);
+		if (Input.GetKeyDown(KEY_G)) {
+			Debug.Log("Fuse time: " + snapshot.gFuses[id] + " secs.");
+			if (snapshot.gFuses[id] < 0) {
+				Debug.Log("You throw a Grenade!");
+				client.Frag(Vector3.zero);
+			}
+			else {
+				Debug.Log("You can't throw another Grenade, until the last explodes.");
+			}
 		}
 		if (!config.usePrediction) {
 			transform.SetPositionAndRotation(snapshot.positions[id], snapshot.rotations[id]);
 		}
 		int newl = snapshot.lifes[id];
-		if (life!=newl){
-			life=newl;
-			Debug.Log("Vida = "+newl);
+		if (life != newl) {
+			life = newl;
+			Debug.Log("Life = " + newl);
 		}
 	}
 

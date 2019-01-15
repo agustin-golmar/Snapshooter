@@ -14,7 +14,7 @@ using UnityEngine;
 	*	-La vida de cada jugador (de 0 a 100).
 	*	-Un vector de posición por cada jugador.
 	*	-Un quaternion de rotación por cada jugador.
-	*	-La cantidad de granadas en vuelo.
+	*	-El tiempo de fusión de la granada.
 	*	-La posición de cada granada.
 	*	-La orientación de cada granada.
 	*
@@ -23,7 +23,7 @@ using UnityEngine;
 	* detonado. Se debe verificar el campo 'gFuses' para determinar si la
 	* granada ha sido utilizada, ya que este campo determina cuanto tiempo
 	* queda antes de explotar. Si es negativo, entonces la granada está
-	* desactivada (no fue lanzada).
+	* desactivada (no fue lanzada), y se puede enviar otra.
 	*/
 
 public class Snapshot {
@@ -41,9 +41,6 @@ public class Snapshot {
 	public int [] lifes;
 	public Vector3 [] positions;
 	public Quaternion [] rotations;
-
-	// Cantidad de granadas en vuelo:
-	public int grenades;
 
 	// Propiedades de cada granada:
 	public float [] gFuses;
@@ -87,9 +84,6 @@ public class Snapshot {
 			lifes[k] = packet.GetInteger();
 			positions[k] = packet.GetVector();
 			rotations[k] = packet.GetQuaternion();
-		}
-		grenades = packet.GetInteger();
-		for (int k = 0; k < grenades; ++k) {
 			gFuses[k] = packet.GetFloat();
 			gPositions[k] = packet.GetVector();
 			gRotations[k] = packet.GetQuaternion();
@@ -117,7 +111,7 @@ public class Snapshot {
 			positions[k] = Vector3.Lerp(from.positions[k], to.positions[k], Δn);
 			rotations[k] = Quaternion.Slerp(from.rotations[k], to.rotations[k], Δn);
 		}
-		grenades = Math.Min(from.grenades, to.grenades);
+		//grenades = Math.Min(from.grenades, to.grenades);
 		for (int k = 0; k < players; ++k) {
 			gFuses[k] = Mathf.Lerp(from.gFuses[k], to.gFuses[k], Δn);
 			gPositions[k] = Vector3.Lerp(from.gPositions[k], to.gPositions[k], Δn);
@@ -131,7 +125,7 @@ public class Snapshot {
 	* Devuelve la representación en forma de paquete de bytes de esta snapshot.
 	*/
 	public Packet ToPacket() {
-		Packet.Builder builder = new Packet.Builder(17 + 40 * players + 32 * grenades)
+		Packet.Builder builder = new Packet.Builder(13 + 72 * players)
 			.AddPacketType(PacketType.SNAPSHOT)
 			.AddInteger(sequence)
 			.AddFloat(timestamp)
@@ -141,11 +135,8 @@ public class Snapshot {
 				.AddInteger(acks[k])
 				.AddInteger(lifes[k])
 				.AddVector(positions[k])
-				.AddQuaternion(rotations[k]);
-		}
-		builder.AddInteger(grenades);
-		for (int k = 0; k < grenades; ++k) {
-			builder.AddFloat(gFuses[k])
+				.AddQuaternion(rotations[k])
+				.AddFloat(gFuses[k])
 				.AddVector(gPositions[k])
 				.AddQuaternion(gRotations[k]);
 		}
@@ -194,11 +185,6 @@ public class Snapshot {
 
 	public Snapshot Rotation(int index, Quaternion rotation) {
 		rotations[index] = rotation;
-		return this;
-	}
-
-	public Snapshot Grenades(int grenades) {
-		this.grenades = grenades;
 		return this;
 	}
 

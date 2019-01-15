@@ -79,18 +79,23 @@ public class Configuration : MonoBehaviour {
 	// Velocidad de los jugadores en [m/s]:
 	public float playerSpeed;
 
+	// Vida máxima de los jugadores:
+	public int playerLife;
+
 	// Time de detonación de una granada en [s]:
 	public float grenadeFuseTime;
 
 	// Radio de efecto de la detonación de una granada en [m]:
 	public float grenadeRadius;
 
+	// Daño infligido por una granada:
+	public int grenadeDamage;
+
 	/**
-	* Carga la escena compelta, e instancia un servidor y/o cliente según se
+	* Carga la escena completa, e instancia un servidor y/o cliente según se
 	* indique en la configuración.
 	*/
 	protected void Start() {
-		//Physics.IgnoreLayerCollision(8,9,true);
 		Debug.Log("Loading scene...");
 		onExit = false;
 		resources = new List<IClosable>();

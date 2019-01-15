@@ -89,8 +89,7 @@ public class Predictor {
 	* jugador y aplica una corrección de ser necesaria.
 	*/
 	public void Validate() {
-		State oldState;
-		if (states.TryGetValue(snapshot.acks[id], out oldState)) {
+		if (states.TryGetValue(snapshot.acks[id], out State oldState)) {
 			float ΔP = Vector3.Distance(oldState.position, snapshot.positions[id]);
 			float ΔR = Quaternion.Angle(oldState.rotation, snapshot.rotations[id]);
 			// Corregir si es necesario:
