@@ -88,6 +88,10 @@ public class Server : IClosable, IAPI {
 				response = Frag(request);
 				break;
 			}
+			case Endpoint.RESPAWN : {
+				response = Respawn(request);
+				break;
+			}
 			default : {
 				Debug.Log("Unknown Endpoint: " + endpoint);
 				return GetResponseHeader(request, 0).Build();
@@ -381,6 +385,16 @@ public class Server : IClosable, IAPI {
 			.SetSnapshot(snapshot)
 			.Throw();
 		Debug.Log("Grenade created on server for ID = " + id);
+		return GetResponseHeader(request.Reset(), 0).Build();
+	}
+
+	public Packet Respawn(Packet request) {
+		Debug.Log("Respawn requested...");
+		int id = request.Reset(6).GetInteger();
+		LoadGhostFor(id);
+		ghostTransform.SetPositionAndRotation(GetRespawn(id),Quaternion.identity);
+		snapshot.lifes[id] = config.playerLife;
+		SaveGhostFor(id);
 		return GetResponseHeader(request.Reset(), 0).Build();
 	}
 }

@@ -69,6 +69,10 @@ public class Player : MonoBehaviour {
 			client.Shoot(transform.position,transform.forward);
 	}
 
+	protected void Respawn() {
+		client.Respawn();
+	}
+
 	/**
 	* Actualiza el estado del jugador. El estado se actualiza automáticamente
 	* al activar predicción, o desde la snapshot global, en caso contrario.
@@ -93,6 +97,10 @@ public class Player : MonoBehaviour {
 		if (life != newl) {
 			life = newl;
 			Debug.Log("Life = " + newl);
+			if (life==0) {
+				Debug.Log("Respawning");
+				Respawn();
+			}
 		}
 	}
 

@@ -8,5 +8,6 @@ public enum Endpoint : byte {
 	JOIN,
 	MOVE,
 	SHOOT,
-	FRAG
+	FRAG,
+	RESPAWN
 }

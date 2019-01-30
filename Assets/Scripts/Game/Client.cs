@@ -237,6 +237,12 @@ public class Client : IClosable {
 	/**
 	* Efectúa un disparo con el rifle (usando hit-scan). Se envía el target.
 	*/
+
+	public void Respawn() {
+		Packet request = GetRequestHeader(PacketType.FLOODING, Endpoint.RESPAWN, 1).Build();
+		packets.Add(sequence - 1, request);
+		output.Write(request);
+	}
 	public void Shoot(Vector3 position, Vector3 target) {
 		Packet.Builder requestBuilder = GetRequestHeader(PacketType.FLOODING, Endpoint.SHOOT, 1);
 		Debug.DrawRay(position, 10 * target, Color.red, 5);
