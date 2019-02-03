@@ -97,7 +97,7 @@ public class Player : MonoBehaviour {
 		if (life != newl) {
 			life = newl;
 			Debug.Log("Life = " + newl);
-			if (life < 0) {
+			if (life <= 0) {
 				Debug.Log("Respawning");
 				Respawn();
 			}
